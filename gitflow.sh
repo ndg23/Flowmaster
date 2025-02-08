@@ -242,6 +242,12 @@ finish_feature() {
     
     info "Finishing feature branch: $current_branch"
     
+    # Check if branch exists on remote
+    local has_remote=false
+    if git ls-remote --heads origin "$current_branch" | grep -q "$current_branch"; then
+        has_remote=true
+    fi
+    
     # Update develop branch
     git checkout develop || error "Failed to checkout develop branch"
     git pull origin develop || error "Failed to pull latest develop changes"
@@ -252,9 +258,15 @@ finish_feature() {
     # Push changes
     git push origin develop || error "Failed to push changes to develop"
     
-    # Delete feature branch
+    # Delete feature branch locally
     git branch -d "$current_branch" || warning "Failed to delete local feature branch"
-    git push origin --delete "$current_branch" || warning "Failed to delete remote feature branch"
+    
+    # Delete remote branch only if it exists
+    if [ "$has_remote" = true ]; then
+        git push origin --delete "$current_branch" || warning "Failed to delete remote feature branch"
+    else
+        info "Remote feature branch does not exist, skipping remote deletion"
+    fi
     
     success "Successfully finished feature: $current_branch"
 }
