@@ -9,9 +9,9 @@ NC='\033[0m' # No Color
 
 # Default installation paths
 INSTALL_DIR="/usr/local/bin"
-SCRIPT_NAME="gitflow"
-TEMP_DIR="/tmp/gitflow"
-REPO_URL="https://github.com/yourusername/gitflow.git"  # Update this with your actual repo URL
+SCRIPT_NAME="flowmaster"
+TEMP_DIR="/tmp/flowmaster"
+REPO_URL="https://github.com/ndg23/Flowmaster.git"  # Updated with actual repo URL
 
 # Function to display error messages
 error() {
@@ -39,7 +39,7 @@ if ! command -v git &> /dev/null; then
     error "Git is not installed. Please install git first."
 fi
 
-echo "🚀 Installing GitFlow..."
+echo "🚀 Installing Flowmaster..."
 
 # Create and clean temporary directory
 rm -rf "$TEMP_DIR" 2>/dev/null
@@ -52,35 +52,59 @@ if ! git clone --depth 1 "$REPO_URL" "$TEMP_DIR" 2>/dev/null; then
 fi
 
 # Copy the script to installation directory
-info "Installing GitFlow..."
+info "Installing Flowmaster..."
 cp "$TEMP_DIR/gitflow.sh" "$INSTALL_DIR/$SCRIPT_NAME" || error "Failed to install script"
 chmod +x "$INSTALL_DIR/$SCRIPT_NAME" || error "Failed to make script executable"
 
 # Install bash completion
 if [ -d "/etc/bash_completion.d" ]; then
     info "Installing bash completion..."
-    if [ -f "$TEMP_DIR/completion/gitflow-completion.bash" ]; then
-        cp "$TEMP_DIR/completion/gitflow-completion.bash" "/etc/bash_completion.d/" || \
+    if [ -f "$TEMP_DIR/completion/flowmaster-completion.bash" ]; then
+        cp "$TEMP_DIR/completion/flowmaster-completion.bash" "/etc/bash_completion.d/" || \
             error "Failed to install bash completion"
     fi
 fi
 
-# Set up git alias
-info "Setting up git alias..."
-git config --global alias.flow '!gitflow' || warning "Failed to set up git alias"
+# Set up shell alias
+info "Setting up aliases..."
+echo "alias fm='flowmaster'" | sudo tee -a /etc/profile.d/flowmaster.sh >/dev/null || \
+    warning "Failed to set up fm alias"
+chmod +x /etc/profile.d/flowmaster.sh
 
 # Clean up
 rm -rf "$TEMP_DIR"
 
 echo
-success "GitFlow has been successfully installed! 🎉"
+success "Flowmaster has been successfully installed! 🎉"
 echo
-echo -e "${YELLOW}To start using GitFlow, either:${NC}"
+echo -e "${YELLOW}To start using Flowmaster, either:${NC}"
 echo -e "1. Run ${GREEN}exec bash${NC} to reload your shell"
 echo -e "2. Or restart your terminal"
 echo
-echo -e "${BLUE}You can then use GitFlow with:${NC}"
-echo -e "  ${GREEN}gitflow${NC} or ${GREEN}git flow${NC}"
+echo -e "${BLUE}You can then use Flowmaster with:${NC}"
+echo -e "  ${GREEN}flowmaster${NC} or ${GREEN}fm${NC}"
+echo
+echo -e "${BLUE}Branch Naming Convention:${NC}"
+echo -e "  ${GREEN}prefix/type/ticket/description${NC}"
+echo
+echo -e "${BLUE}Where:${NC}"
+echo -e "• ${YELLOW}prefix${NC}      : feature, hotfix, release"
+echo -e "• ${YELLOW}type${NC}        : The type of change you're making:"
+echo -e "    ${GREEN}feat${NC}     : New feature"
+echo -e "    ${GREEN}fix${NC}      : Bug fix"
+echo -e "    ${GREEN}docs${NC}     : Documentation changes"
+echo -e "    ${GREEN}style${NC}    : Code style changes (formatting, etc.)"
+echo -e "    ${GREEN}refactor${NC} : Code refactoring"
+echo -e "    ${GREEN}perf${NC}     : Performance improvements"
+echo -e "    ${GREEN}test${NC}     : Adding or updating tests"
+echo -e "    ${GREEN}chore${NC}    : Maintenance tasks"
+echo -e "• ${YELLOW}ticket${NC}      : Your ticket ID (e.g., JIRA-123)"
+echo -e "• ${YELLOW}description${NC}  : Brief description in kebab-case"
+echo
+echo -e "${BLUE}Examples:${NC}"
+echo -e "  ${GREEN}feature/feat/JIRA-123/add-login-page${NC}"
+echo -e "  ${GREEN}hotfix/fix/JIRA-456/fix-security-issue${NC}"
+echo -e "  ${GREEN}feature/refactor/JIRA-789/optimize-database-queries${NC}"
 echo
 
 # Don't try to reload bashrc as it won't work with sudo
