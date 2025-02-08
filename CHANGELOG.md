@@ -3,7 +3,7 @@
 ## [Unreleased]
 
 ### 🐛 Bug Fixes
-- fix: Change feature convention name- fix: just addded new
+- fix: changes installation process- fix: Change feature convention name- fix: just addded new
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
