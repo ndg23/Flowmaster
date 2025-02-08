@@ -81,9 +81,9 @@ validate_branch_name() {
     local branch=$1
     local prefix=$2
     
-    # Check if branch name follows convention: type/JIRA-123/description
-    if [[ ! $branch =~ ^$prefix/(feat|fix|chore|docs|style|refactor|perf|test)/(JIRA|PROJECT)-[0-9]+/[a-z0-9-]+$ ]]; then
-        error "Branch name must follow pattern: $prefix/type/JIRA-123/description"
+    # Check if branch name follows convention: feature/name
+    if [[ ! $branch =~ ^$prefix/[a-z0-9-]+$ ]]; then
+        error "Branch name must follow pattern: $prefix/name"
     fi
 }
 
@@ -183,27 +183,51 @@ check_repository_config() {
     return 0
 }
 
+# Function to ensure develop branch exists
+ensure_develop_branch() {
+    # Check if develop branch exists locally
+    if ! git show-ref --verify --quiet refs/heads/develop; then
+        info "Develop branch doesn't exist. Creating it..."
+        
+        # Check if main/master branch exists
+        local main_branch="main"
+        if git show-ref --verify --quiet refs/heads/master; then
+            main_branch="master"
+        fi
+        
+        # Create develop from main/master if it exists
+        if git show-ref --verify --quiet refs/heads/$main_branch; then
+            git checkout $main_branch || error "Failed to checkout $main_branch branch"
+            git pull origin $main_branch || warning "Failed to pull latest $main_branch changes"
+            git checkout -b develop || error "Failed to create develop branch"
+            git push -u origin develop || warning "Failed to push develop branch"
+            success "Created develop branch from $main_branch"
+        else
+            # Create develop as first branch
+            git checkout --orphan develop || error "Failed to create develop branch"
+            git reset --hard || error "Failed to reset develop branch"
+            git commit --allow-empty -m "chore: Initialize develop branch" || error "Failed to create initial commit"
+            git push -u origin develop || warning "Failed to push develop branch"
+            success "Initialized new develop branch"
+        fi
+    fi
+    
+    # Ensure we're on develop branch
+    git checkout develop || error "Failed to checkout develop branch"
+    git pull origin develop || warning "Failed to pull latest develop changes"
+}
+
 # Function to start a new feature
 start_feature() {
     check_git_repo || return 1
     ensure_clean_work_tree || return 1
     check_remote_connection || return 1
+    ensure_develop_branch || return 1
     
     local branch_name=$1
     validate_branch_name "$branch_name" "feature" || return 1
     
     info "Starting new feature branch: $branch_name"
-    git checkout develop || {
-        error "Develop branch doesn't exist. Would you like to create it? [y/N]" "no_exit"
-        read -r response
-        if [[ "$response" =~ ^[Yy]$ ]]; then
-            git checkout -b develop
-            git push -u origin develop
-        else
-            return 1
-        fi
-    }
-    git pull origin develop || error "Failed to pull latest develop changes"
     git checkout -b "$branch_name" || error "Failed to create new branch"
     success "Successfully created feature branch: $branch_name"
 }
@@ -256,6 +280,7 @@ start_release() {
     ensure_clean_work_tree || return 1
     check_repository_config || return 1
     check_remote_connection || return 1
+    ensure_develop_branch || return 1
     
     local version=$1
     validate_version "$version" "true"
@@ -263,7 +288,6 @@ start_release() {
     local branch_name="release/v$version"
     
     info "Starting release: $version"
-    git checkout develop || error "Failed to checkout develop branch"
     
     # Try to pull with more detailed error handling
     if ! git pull origin develop; then
@@ -636,10 +660,31 @@ get_feature_name() {
     echo -e "${BOLD}Start New Feature${NC}"
     echo -e "${CYAN}═══════════════════════════════════${NC}"
     echo
-    echo -e "${YELLOW}Branch naming convention:${NC} feature/type/JIRA-123/description"
-    echo -e "${YELLOW}Types:${NC} feat, fix, chore, docs, style, refactor, perf, test"
-    echo
-    read -p "Enter feature branch name: " branch_name
+
+    # Get feature name
+    while true; do
+        echo -e "${YELLOW}Enter feature name:${NC}"
+        read -r desc
+        # Convert to kebab-case and clean up
+        desc=$(echo "$desc" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | sed 's/[^a-z0-9-]//g')
+        if [[ -n "$desc" ]]; then
+            break
+        else
+            echo -e "${RED}Feature name cannot be empty${NC}"
+        fi
+    done
+
+    # Construct branch name
+    branch_name="feature/$desc"
+    
+    echo -e "\n${GREEN}Branch name will be: $branch_name${NC}"
+    echo -e "${YELLOW}Continue? [Y/n]${NC}"
+    read -r response
+    if [[ "$response" =~ ^[Nn]$ ]]; then
+        error "Branch creation cancelled"
+        return 1
+    fi
+    
     echo
 }
 
