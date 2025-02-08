@@ -487,6 +487,8 @@ create_commit() {
     done
     echo
     
+
+    
     # Get commit type
     while true; do
         read -p "Enter commit type number [1-${#COMMIT_TYPES[@]}]: " type_num
