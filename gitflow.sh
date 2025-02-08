@@ -81,9 +81,9 @@ validate_branch_name() {
     local branch=$1
     local prefix=$2
     
-    # Check if branch name follows convention: type/JIRA-123/description
-    if [[ ! $branch =~ ^$prefix/(feat|fix|chore|docs|style|refactor|perf|test)/(JIRA|PROJECT)-[0-9]+/[a-z0-9-]+$ ]]; then
-        error "Branch name must follow pattern: $prefix/type/JIRA-123/description"
+    # Check if branch name follows convention: feature/name
+    if [[ ! $branch =~ ^$prefix/[a-z0-9-]+$ ]]; then
+        error "Branch name must follow pattern: $prefix/name"
     fi
 }
 
@@ -636,10 +636,31 @@ get_feature_name() {
     echo -e "${BOLD}Start New Feature${NC}"
     echo -e "${CYAN}═══════════════════════════════════${NC}"
     echo
-    echo -e "${YELLOW}Branch naming convention:${NC} feature/type/JIRA-123/description"
-    echo -e "${YELLOW}Types:${NC} feat, fix, chore, docs, style, refactor, perf, test"
-    echo
-    read -p "Enter feature branch name: " branch_name
+
+    # Get feature name
+    while true; do
+        echo -e "${YELLOW}Enter feature name:${NC}"
+        read -r desc
+        # Convert to kebab-case and clean up
+        desc=$(echo "$desc" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | sed 's/[^a-z0-9-]//g')
+        if [[ -n "$desc" ]]; then
+            break
+        else
+            echo -e "${RED}Feature name cannot be empty${NC}"
+        fi
+    done
+
+    # Construct branch name
+    branch_name="feature/$desc"
+    
+    echo -e "\n${GREEN}Branch name will be: $branch_name${NC}"
+    echo -e "${YELLOW}Continue? [Y/n]${NC}"
+    read -r response
+    if [[ "$response" =~ ^[Nn]$ ]]; then
+        error "Branch creation cancelled"
+        return 1
+    fi
+    
     echo
 }
 
