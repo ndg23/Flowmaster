@@ -242,6 +242,12 @@ finish_feature() {
     
     info "Finishing feature branch: $current_branch"
     
+    # Check if branch exists on remote
+    local has_remote=false
+    if git ls-remote --heads origin "$current_branch" | grep -q "$current_branch"; then
+        has_remote=true
+    fi
+    
     # Update develop branch
     git checkout develop || error "Failed to checkout develop branch"
     git pull origin develop || error "Failed to pull latest develop changes"
@@ -252,9 +258,15 @@ finish_feature() {
     # Push changes
     git push origin develop || error "Failed to push changes to develop"
     
-    # Delete feature branch
+    # Delete feature branch locally
     git branch -d "$current_branch" || warning "Failed to delete local feature branch"
-    git push origin --delete "$current_branch" || warning "Failed to delete remote feature branch"
+    
+    # Delete remote branch only if it exists
+    if [ "$has_remote" = true ]; then
+        git push origin --delete "$current_branch" || warning "Failed to delete remote feature branch"
+    else
+        info "Remote feature branch does not exist, skipping remote deletion"
+    fi
     
     success "Successfully finished feature: $current_branch"
 }
@@ -330,6 +342,9 @@ finish_release() {
     local version=${current_branch#release/v}
     
     info "Finishing release: $version"
+    
+    # Finalize changelog before merging
+    finalize_changelog "$version"
     
     # For pre-release versions, only merge to develop
     if [[ $version =~ -(.+)$ ]]; then
@@ -484,6 +499,8 @@ create_commit() {
     done
     echo
     
+
+    
     # Get commit type
     while true; do
         read -p "Enter commit type number [1-${#COMMIT_TYPES[@]}]: " type_num
@@ -542,12 +559,9 @@ update_changelog() {
     
     # Create changelog if it doesn't exist
     if [ ! -f "$changelog_file" ]; then
-        echo "# Changelog
+        echo "# Journal des modifications
 
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 " > "$changelog_file"
     fi
     
@@ -556,36 +570,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         sed -i.bak "1a\\
 \\
 ## [Unreleased]\\
+### Ajouté\\
+### Modifié\\
+### Corrigé\\
+### Supprimé\\
 " "$changelog_file"
         rm -f "$changelog_file.bak"
     fi
     
     # Determine the section based on commit type
     local section
-    if [[ "$commit_msg" == *"BREAKING CHANGE"* ]]; then
-        section="### ⚠ BREAKING CHANGES"
-    elif [[ "$commit_msg" == feat* ]]; then
-        section="### ✨ Features"
+    if [[ "$commit_msg" == feat* ]]; then
+        section="### Ajouté"
     elif [[ "$commit_msg" == fix* ]]; then
-        section="### 🐛 Bug Fixes"
+        section="### Corrigé"
+    elif [[ "$commit_msg" =~ ^(refactor|style|perf) ]]; then
+        section="### Modifié"
+    elif [[ "$commit_msg" == revert* ]]; then
+        section="### Supprimé"
     fi
     
-    # Add section if it doesn't exist
-    if ! grep -q "^$section" "$changelog_file"; then
-        sed -i.bak "/## \[Unreleased\]/a\\
-\\
-$section\\
-" "$changelog_file"
+    # Add entry if section was determined
+    if [ ! -z "$section" ]; then
+        # Clean up commit message for changelog
+        local entry=$(echo "$commit_msg" | sed -E 's/^(feat|fix|refactor|style|perf|revert)(\([^)]+\))?:\s*//')
+        sed -i.bak "/^$section/a\\
+- $entry" "$changelog_file"
         rm -f "$changelog_file.bak"
+        
+        git add "$changelog_file"
     fi
-    
-    # Add commit message to appropriate section
-    local entry="- ${commit_msg%%$'\n'*}"
-    sed -i.bak "/^$section/a\\
-$entry" "$changelog_file"
-    rm -f "$changelog_file.bak"
-    
-    git add "$changelog_file"
 }
 
 # Function to finalize changelog for release
@@ -594,19 +608,67 @@ finalize_changelog() {
     local changelog_file="CHANGELOG.md"
     local today=$(date +%Y-%m-%d)
     
-    # Replace [Unreleased] with new version
-    sed -i.bak "s/## \[Unreleased\]/## [${version}] - ${today}/" "$changelog_file"
+    # Get GAFAM compatibility info
+    echo -e "\n${YELLOW}Enter compatibility information:${NC}"
+    echo -e "${BLUE}Format examples:${NC}"
+    echo -e "  Google Chrome 120+"
+    echo -e "  Safari 17+"
+    echo -e "  Firefox 122+"
+    echo -e "  Edge 120+"
+    echo -e "  Opera 105+"
+    
+    # Get browser compatibility
+    browsers=()
+    for browser in "Google Chrome" "Safari" "Firefox" "Edge" "Opera"; do
+        while true; do
+            echo -e "\n${YELLOW}Enter minimum $browser version (e.g., 120+) or press enter to skip:${NC}"
+            read -r version_info
+            if [[ -z "$version_info" ]]; then
+                break
+            elif [[ $version_info =~ ^[0-9]+\+$ ]]; then
+                browsers+=("$browser $version_info")
+                break
+            else
+                echo -e "${RED}Invalid version format. Please use format: NUMBER+ (e.g., 120+)${NC}"
+            fi
+        done
+    done
+    
+    # Construct browser compatibility string
+    compatibility=""
+    if [ ${#browsers[@]} -gt 0 ]; then
+        compatibility=" | Compatible avec : ${browsers[0]}"
+        for ((i=1; i<${#browsers[@]}; i++)); do
+            compatibility="$compatibility, ${browsers[$i]}"
+        done
+    fi
+    
+    # Replace [Unreleased] with new version including compatibility info
+    local version_header="## [$version] - $today$compatibility"
+    sed -i.bak "s/## \[Unreleased\]/$version_header/" "$changelog_file"
     rm -f "$changelog_file.bak"
     
     # Add new Unreleased section
     sed -i.bak "1a\\
 \\
 ## [Unreleased]\\
+### Ajouté\\
+### Modifié\\
+### Corrigé\\
+### Supprimé\\
 " "$changelog_file"
     rm -f "$changelog_file.bak"
     
+    # Remove empty sections in the current release
+    sed -i.bak "/$version_header/,/^## /{/^### .*/{N;/\n$/d}}" "$changelog_file"
+    rm -f "$changelog_file.bak"
+    
     git add "$changelog_file"
-    git commit -m "chore: update changelog for version $version"
+    git commit -m "chore: mise à jour du changelog pour la version $version"
+    
+    # Show the final version header
+    echo -e "\n${GREEN}Version header created:${NC}"
+    echo -e "${BLUE}$version_header${NC}\n"
 }
 
 # Function to show help
