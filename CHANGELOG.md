@@ -1,6 +1,12 @@
 # Changelog
 
 ## [Unreleased]
+### Ajouté
+### Modifié
+### Corrigé
+### Supprimé
+
+## [1.1.1-alpha.1] - 2025-02-08
 
 ### 🐛 Bug Fixes
 - fix: changes installation process- fix: Change feature convention name- fix: just addded new
