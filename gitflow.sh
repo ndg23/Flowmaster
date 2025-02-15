@@ -483,6 +483,44 @@ Examples:
 
 # Function to start a release
 start_release() {
+    # Check for uncommitted changes
+    if ! git diff-index --quiet HEAD --; then
+        error "Des changements non commités ont été détectés." "no_exit"
+        echo -e "\n${CYAN}╭───────────────────────────────────────╮${NC}"
+        echo -e "${CYAN}│${NC} ${BOLD}Options disponibles${NC}                      ${CYAN}│${NC}"
+        echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
+        echo -e "${CYAN}│${NC} ${BLUE}[1]${NC} Commiter les changements            ${CYAN}│${NC}"
+        echo -e "${CYAN}│${NC} ${BLUE}[2]${NC} Stash les changements              ${CYAN}│${NC}"
+        echo -e "${CYAN}│${NC} ${BLUE}[3]${NC} Annuler l'opération                ${CYAN}│${NC}"
+        echo -e "${CYAN}╰───────────────────────────────────────╯${NC}"
+        
+        read -p "Choisissez une option [1-3]: " choice
+        
+        case $choice in
+            1)
+                create_commit
+                if [ $? -ne 0 ]; then
+                    error "Échec de la création du commit"
+                    return 1
+                fi
+                ;;
+            2)
+                info "Sauvegarde des changements..."
+                local stash_name="release_start_$(date +%s)"
+                if ! git stash push -m "$stash_name"; then
+                    error "Échec de la sauvegarde des changements"
+                    return 1
+                fi
+                info "Changements sauvegardés avec le nom: $stash_name"
+                local used_stash=true
+                ;;
+            *)
+                error "Opération annulée"
+                return 1
+                ;;
+        esac
+    fi
+    
     check_remote_connection || return 1
     
     # Get current version from latest tag
@@ -579,7 +617,29 @@ start_release() {
         info "Creating release branch: $branch_name"
         if ! git checkout -b "$branch_name" develop; then
             error "Failed to create release branch"
+            # Restore stashed changes if necessary
+            if [ "$used_stash" = true ]; then
+                info "Restauration des changements sauvegardés..."
+                if ! git stash pop "stash@{0}"; then
+                    warning "Impossible de restaurer les changements automatiquement."
+                    echo -e "${YELLOW}Vos changements sont toujours dans le stash avec le nom: $stash_name${NC}"
+                    echo -e "Utilisez '${GREEN}git stash list${NC}' pour voir tous les stash"
+                    echo -e "Utilisez '${GREEN}git stash pop${NC}' pour les restaurer manuellement"
+                fi
+            fi
             return 1
+        fi
+        
+        # If we used stash, try to restore changes
+        if [ "$used_stash" = true ]; then
+            info "Restauration des changements sauvegardés..."
+            if ! git stash pop "stash@{0}"; then
+                warning "Impossible de restaurer les changements automatiquement."
+                echo -e "${YELLOW}Vos changements sont toujours dans le stash avec le nom: $stash_name${NC}"
+                echo -e "Utilisez '${GREEN}git stash list${NC}' pour voir tous les stash"
+                echo -e "Utilisez '${GREEN}git stash pop${NC}' pour les restaurer manuellement"
+                return 1
+            fi
         fi
         
         success "Successfully created release branch: $branch_name"
