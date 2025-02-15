@@ -562,43 +562,57 @@ update_changelog() {
         echo "# Journal des modifications
 
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
+
+## [Unreleased]
+### ✨ Features
+### 🐛 Bug Fixes
+### 📚 Documentation
+### ♻️ Refactoring
+### ⚡️ Performance
+### 🔧 Chores
 " > "$changelog_file"
     fi
     
-    # Check if we have an Unreleased section
-    if ! grep -q "## \[Unreleased\]" "$changelog_file"; then
-        sed -i.bak "1a\\
-\\
-## [Unreleased]\\
-### Ajouté\\
-### Modifié\\
-### Corrigé\\
-### Supprimé\\
-" "$changelog_file"
-        rm -f "$changelog_file.bak"
-    fi
-    
-    # Determine the section based on commit type
+    # Determine the section based on commit type and emoji
     local section
-    if [[ "$commit_msg" == feat* ]]; then
-        section="### Ajouté"
-    elif [[ "$commit_msg" == fix* ]]; then
-        section="### Corrigé"
-    elif [[ "$commit_msg" =~ ^(refactor|style|perf) ]]; then
-        section="### Modifié"
-    elif [[ "$commit_msg" == revert* ]]; then
-        section="### Supprimé"
+    local entry
+    
+    if [[ "$commit_msg" =~ ^feat ]]; then
+        section="### ✨ Features"
+        entry=$(echo "$commit_msg" | sed -E 's/^feat(\([^)]+\))?:\s*//')
+    elif [[ "$commit_msg" =~ ^fix ]]; then
+        section="### 🐛 Bug Fixes"
+        entry=$(echo "$commit_msg" | sed -E 's/^fix(\([^)]+\))?:\s*//')
+    elif [[ "$commit_msg" =~ ^docs ]]; then
+        section="### 📚 Documentation"
+        entry=$(echo "$commit_msg" | sed -E 's/^docs(\([^)]+\))?:\s*//')
+    elif [[ "$commit_msg" =~ ^refactor ]]; then
+        section="### ♻️ Refactoring"
+        entry=$(echo "$commit_msg" | sed -E 's/^refactor(\([^)]+\))?:\s*//')
+    elif [[ "$commit_msg" =~ ^perf ]]; then
+        section="### ⚡️ Performance"
+        entry=$(echo "$commit_msg" | sed -E 's/^perf(\([^)]+\))?:\s*//')
+    elif [[ "$commit_msg" =~ ^chore ]]; then
+        section="### 🔧 Chores"
+        entry=$(echo "$commit_msg" | sed -E 's/^chore(\([^)]+\))?:\s*//')
     fi
     
     # Add entry if section was determined
-    if [ ! -z "$section" ]; then
-        # Clean up commit message for changelog
-        local entry=$(echo "$commit_msg" | sed -E 's/^(feat|fix|refactor|style|perf|revert)(\([^)]+\))?:\s*//')
+    if [ ! -z "$section" ] && [ ! -z "$entry" ]; then
+        # Check if section exists in Unreleased, if not add it
+        if ! grep -q "^$section" "$changelog_file"; then
+            sed -i.bak "/## \[Unreleased\]/a\\
+$section" "$changelog_file"
+            rm -f "$changelog_file.bak"
+        fi
+        
+        # Add the entry under the appropriate section
         sed -i.bak "/^$section/a\\
 - $entry" "$changelog_file"
         rm -f "$changelog_file.bak"
         
         git add "$changelog_file"
+        info "Updated CHANGELOG.md with: $entry"
     fi
 }
 
