@@ -1,6 +1,6 @@
 # Journal des modifications
 
-## [Unreleased]
+## [1.1.2-alpha.2] - 2025-02-15
 ### Ajouté
 ### Modifié
 ### Corrigé
@@ -8,23 +8,27 @@
 
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
-## [1.1.0] - 2024-02-27
+## [1.1.2-alpha.2] - 2025-02-15
+### Ajouté
+### Modifié
+### Corrigé
+### Supprimé
 
+## [1.1.1-alpha.1] - 2025-02-15 (Alpha)
+### Ajouté
+- Upgrade changelog write
+### Modifié
+- Change feature convention name
+### Corrigé
+- Changes installation process
+- Fix security issue
+### Supprimé
+
+## [1.1.0] - 2024-02-27
 ### Ajouté
 - Interface CLI interactive avec menu coloré et emojis
 - Gestion complète du workflow GitFlow
-- Système de commits conventionnels avec emojis :
-  - ✨ feat: Nouvelles fonctionnalités
-  - 🐛 fix: Corrections de bugs
-  - 📚 docs: Documentation
-  - 💎 style: Style du code
-  - ♻️ refactor: Refactoring
-  - ⚡️ perf: Performance
-  - 🚨 test: Tests
-  - 📦 build: Build
-  - 👷 ci: CI
-  - 🔧 chore: Maintenance
-  - ⏪️ revert: Retour en arrière
+- Système de commits conventionnels avec emojis
 - Validation automatique des noms de branches
 - Gestion des pré-releases (alpha, beta, rc)
 - Génération automatique du changelog
@@ -49,10 +53,15 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 - Gestion sécurisée des credentials Git
 
 ## [1.0.1-alpha.1] - 2025-02-15
-### ✨ Features### Ajouté
--  upgrade changelo write### Modifié
+### ✨ Features
+### Ajouté
+-  upgrade changelo write
+### Modifié
+- 
 ### Corrigé
+- 
 ### Supprimé
+- 
 
 ## [1.1.1-alpha.1] - 2025-02-08
 

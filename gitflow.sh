@@ -232,6 +232,84 @@ start_feature() {
     success "Successfully created feature branch: $branch_name"
 }
 
+# Function to handle git errors
+handle_git_error() {
+    local error_msg=$1
+    local action=$2
+
+    if [[ $error_msg =~ "refusing to merge unrelated histories" ]]; then
+        error "Les historiques des branches sont différents." "no_exit"
+        echo -e "\n${YELLOW}Options disponibles :${NC}"
+        echo -e "1) Forcer le merge avec --allow-unrelated-histories"
+        echo -e "2) Annuler l'opération"
+        read -p "Choisissez une option [1-2]: " choice
+        
+        case $choice in
+            1)
+                info "Tentative de merge forcé..."
+                if ! git merge --allow-unrelated-histories "$action"; then
+                    error "Échec du merge forcé. Résolvez les conflits manuellement."
+                fi
+                ;;
+            *)
+                error "Opération annulée"
+                ;;
+        esac
+        return 1
+    elif [[ $error_msg =~ "Permission denied" ]]; then
+        error "Permissions Git insuffisantes. Vérifiez vos droits d'accès." "no_exit"
+        echo -e "\n${YELLOW}Suggestions :${NC}"
+        echo -e "1) Vérifiez vos clés SSH"
+        echo -e "2) Vérifiez vos permissions sur le dépôt"
+        echo -e "3) Contactez votre administrateur"
+        return 1
+    elif [[ $error_msg =~ "cannot lock ref" ]]; then
+        error "Impossible de verrouiller la référence. Un autre processus Git est peut-être en cours." "no_exit"
+        echo -e "\n${YELLOW}Solutions possibles :${NC}"
+        echo -e "1) Attendez quelques instants et réessayez"
+        echo -e "2) Vérifiez les processus Git en cours"
+        echo -e "3) Supprimez manuellement les fichiers .lock si nécessaire"
+        return 1
+    elif [[ $error_msg =~ "conflict" ]]; then
+        error "Conflits détectés." "no_exit"
+        echo -e "\n${YELLOW}Options :${NC}"
+        echo -e "1) Résoudre les conflits manuellement"
+        echo -e "2) Annuler le merge"
+        read -p "Choisissez une option [1-2]: " choice
+        
+        case $choice in
+            1)
+                info "Résolvez les conflits puis utilisez:"
+                echo -e "git add <fichiers>"
+                echo -e "git commit -m 'resolve conflicts'"
+                ;;
+            *)
+                git merge --abort
+                error "Merge annulé"
+                ;;
+        esac
+        return 1
+    fi
+    
+    # Erreur générique
+    error "Une erreur Git s'est produite: $error_msg"
+    return 1
+}
+
+# Function to safely execute git commands
+safe_git_command() {
+    local command=$1
+    local error_context=$2
+    local output
+    
+    # Exécute la commande et capture la sortie et l'erreur
+    if ! output=$(eval "$command" 2>&1); then
+        handle_git_error "$output" "$error_context"
+        return 1
+    fi
+    return 0
+}
+
 # Function to finish a feature
 finish_feature() {
     ensure_clean_work_tree || return 1
@@ -249,21 +327,34 @@ finish_feature() {
     fi
     
     # Update develop branch
-    git checkout develop || error "Failed to checkout develop branch"
-    git pull origin develop || error "Failed to pull latest develop changes"
+    if ! safe_git_command "git checkout develop" "develop"; then
+        return 1
+    fi
+    
+    if ! safe_git_command "git pull origin develop" "develop"; then
+        return 1
+    fi
     
     # Merge feature branch
-    git merge --no-ff "$current_branch" || error "Failed to merge feature branch"
+    if ! safe_git_command "git merge --no-ff '$current_branch'" "$current_branch"; then
+        return 1
+    fi
     
     # Push changes
-    git push origin develop || error "Failed to push changes to develop"
+    if ! safe_git_command "git push origin develop" "develop"; then
+        return 1
+    fi
     
     # Delete feature branch locally
-    git branch -d "$current_branch" || warning "Failed to delete local feature branch"
+    if ! safe_git_command "git branch -d '$current_branch'" "$current_branch"; then
+        warning "Failed to delete local feature branch"
+    fi
     
     # Delete remote branch only if it exists
     if [ "$has_remote" = true ]; then
-        git push origin --delete "$current_branch" || warning "Failed to delete remote feature branch"
+        if ! safe_git_command "git push origin --delete '$current_branch'" "$current_branch"; then
+            warning "Failed to delete remote feature branch"
+        fi
     else
         info "Remote feature branch does not exist, skipping remote deletion"
     fi
@@ -277,10 +368,26 @@ validate_version() {
     local allow_prerelease=$2
     
     if [[ $allow_prerelease == "true" ]]; then
+        # Validate version with optional pre-release tag
         if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+(-((alpha|beta|rc)\.[0-9]+))?$ ]]; then
-            error "Version must follow semantic versioning: X.Y.Z[-prerelease]\nExamples: 1.0.0, 1.1.0-alpha.1, 2.0.0-beta.2, 1.2.0-rc.1"
+            error "Version must follow semantic versioning: X.Y.Z[-prerelease]
+Examples:
+- 1.0.0 (Release finale)
+- 1.0.0-alpha.1 (Alpha release)
+- 1.0.0-beta.1 (Beta release)
+- 1.0.0-rc.1 (Release Candidate)"
+        fi
+        
+        # If it's a pre-release, show appropriate message
+        if [[ $version =~ -alpha ]]; then
+            info "Creating alpha release for internal testing"
+        elif [[ $version =~ -beta ]]; then
+            info "Creating beta release for external testing"
+        elif [[ $version =~ -rc ]]; then
+            info "Creating release candidate for final testing"
         fi
     else
+        # For hotfix versions, only allow final versions
         if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             error "Version must follow semantic versioning: X.Y.Z"
         fi
@@ -564,37 +671,29 @@ update_changelog() {
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
 ## [Unreleased]
-### ✨ Features
-### 🐛 Bug Fixes
-### 📚 Documentation
-### ♻️ Refactoring
-### ⚡️ Performance
-### 🔧 Chores
+### Ajouté
+### Modifié
+### Corrigé
+### Supprimé
 " > "$changelog_file"
     fi
     
-    # Determine the section based on commit type and emoji
+    # Determine the section based on commit type
     local section
     local entry
     
     if [[ "$commit_msg" =~ ^feat ]]; then
-        section="### ✨ Features"
+        section="### Ajouté"
         entry=$(echo "$commit_msg" | sed -E 's/^feat(\([^)]+\))?:\s*//')
     elif [[ "$commit_msg" =~ ^fix ]]; then
-        section="### 🐛 Bug Fixes"
+        section="### Corrigé"
         entry=$(echo "$commit_msg" | sed -E 's/^fix(\([^)]+\))?:\s*//')
-    elif [[ "$commit_msg" =~ ^docs ]]; then
-        section="### 📚 Documentation"
-        entry=$(echo "$commit_msg" | sed -E 's/^docs(\([^)]+\))?:\s*//')
-    elif [[ "$commit_msg" =~ ^refactor ]]; then
-        section="### ♻️ Refactoring"
-        entry=$(echo "$commit_msg" | sed -E 's/^refactor(\([^)]+\))?:\s*//')
-    elif [[ "$commit_msg" =~ ^perf ]]; then
-        section="### ⚡️ Performance"
-        entry=$(echo "$commit_msg" | sed -E 's/^perf(\([^)]+\))?:\s*//')
-    elif [[ "$commit_msg" =~ ^chore ]]; then
-        section="### 🔧 Chores"
-        entry=$(echo "$commit_msg" | sed -E 's/^chore(\([^)]+\))?:\s*//')
+    elif [[ "$commit_msg" =~ ^(refactor|style|perf) ]]; then
+        section="### Modifié"
+        entry=$(echo "$commit_msg" | sed -E 's/^(refactor|style|perf)(\([^)]+\))?:\s*//')
+    elif [[ "$commit_msg" =~ ^revert ]]; then
+        section="### Supprimé"
+        entry=$(echo "$commit_msg" | sed -E 's/^revert(\([^)]+\))?:\s*//')
     fi
     
     # Add entry if section was determined
@@ -624,20 +723,29 @@ finalize_changelog() {
     
     # Replace [Unreleased] with new version
     local version_header="## [$version] - $today"
-    sed -i.bak "s/## \[Unreleased\]/$version_header/" "$changelog_file"
-    rm -f "$changelog_file.bak"
     
-    # Add new Unreleased section with emojis
-    sed -i.bak "1a\\
+    # Add pre-release indicator if applicable
+    if [[ $version =~ -alpha ]]; then
+        version_header="$version_header (Alpha)"
+    elif [[ $version =~ -beta ]]; then
+        version_header="$version_header (Beta)"
+    elif [[ $version =~ -rc ]]; then
+        version_header="$version_header (Release Candidate)"
+    fi
+    
+    # Insert new version after the header, keeping Unreleased at top
+    sed -i.bak "/# Journal des modifications/a\\
 \\
 ## [Unreleased]\\
-### ✨ Features\\
-### 🐛 Bug Fixes\\
-### 📚 Documentation\\
-### ♻️ Refactoring\\
-### ⚡️ Performance\\
-### 🔧 Chores\\
+### Ajouté\\
+### Modifié\\
+### Corrigé\\
+### Supprimé\\
 " "$changelog_file"
+    rm -f "$changelog_file.bak"
+    
+    # Replace old Unreleased with new version
+    sed -i.bak "s/## \[Unreleased\].*$/## [$version] - $today/" "$changelog_file"
     rm -f "$changelog_file.bak"
     
     # Remove empty sections in the current release
@@ -655,8 +763,17 @@ finalize_changelog() {
 
 $tag_message"
     
-    # Show the final version header
+    # Show the final version header with appropriate message
     echo -e "\n${GREEN}Version $version finalisée :${NC}"
+    if [[ $version =~ -alpha ]]; then
+        echo -e "${YELLOW}Version Alpha pour tests internes${NC}"
+    elif [[ $version =~ -beta ]]; then
+        echo -e "${YELLOW}Version Beta pour tests externes${NC}"
+    elif [[ $version =~ -rc ]]; then
+        echo -e "${YELLOW}Version Release Candidate pour tests finaux${NC}"
+    else
+        echo -e "${GREEN}Version Finale${NC}"
+    fi
     echo -e "${BLUE}$version_header${NC}"
     echo -e "${YELLOW}Tag créé avec le contenu du changelog${NC}\n"
 }
@@ -667,43 +784,74 @@ show_help() {
     read -p "Press Enter to continue..."
 }
 
+# Function to get current version
+get_current_version() {
+    # Try to get the latest tag
+    local latest_tag=$(git describe --tags --abbrev=0 2>/dev/null)
+    if [ -z "$latest_tag" ]; then
+        echo "0.0.0"
+    else
+        # Remove 'v' prefix if present
+        echo "${latest_tag#v}"
+    fi
+}
+
 # Function to display menu
 show_menu() {
     clear
-    echo -e "${BOLD}🌊 FlowMaster CLI${NC}"
-    echo -e "${CYAN}═══════════════════════════════════${NC}"
-    echo -e "${YELLOW}Type 'h' for workflow help${NC}"
+    local current_version=$(get_current_version)
+    local current_branch=$(git branch --show-current 2>/dev/null || echo 'Not a git repository')
+    local changes_count=$(git status --porcelain 2>/dev/null | wc -l)
+    local latest_commit=$(git log -1 --pretty=format:'%h - %s' 2>/dev/null || echo 'No commits yet')
+    
+    # Header
     echo
-    echo -e "${BOLD}Select an action:${NC}"
+    echo -e "${BOLD}             🌊 FlowMaster CLI ${NC}"
+    echo -e "${CYAN}             Version ${current_version}${NC}"
     echo
-    echo -e "${CYAN}Feature Management${NC}"
-    echo -e "  ${BLUE}1)${NC} Start new feature"
-    echo -e "  ${BLUE}2)${NC} Finish feature"
+    echo -e "${CYAN}╭───────────────────────────────────────╮${NC}"
+    
+    # Status Bar
+    echo -e "${CYAN}│${NC} ${BOLD}Status${NC}                                 ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} Branch  : ${GREEN}$current_branch${NC}            ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} Changes : ${YELLOW}$changes_count file(s)${NC}               ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} Latest  : ${BLUE}$latest_commit${NC}     ${CYAN}│${NC}"
+    echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
+    
+    # Feature Management
+    echo -e "${CYAN}│${NC} ${BOLD}Feature Management${NC}                     ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[1]${NC} Start Feature                      ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[2]${NC} Finish Feature                     ${CYAN}│${NC}"
+    echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
+    
+    # Release Management
+    echo -e "${CYAN}│${NC} ${BOLD}Release Management${NC}                     ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[3]${NC} Start Release                      ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[4]${NC} Finish Release                     ${CYAN}│${NC}"
+    echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
+    
+    # Hotfix Management
+    echo -e "${CYAN}│${NC} ${BOLD}Hotfix Management${NC}                      ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[5]${NC} Start Hotfix                       ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[6]${NC} Finish Hotfix                      ${CYAN}│${NC}"
+    echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
+    
+    # Other Actions
+    echo -e "${CYAN}│${NC} ${BOLD}Other Actions${NC}                          ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[7]${NC} Create Commit                      ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[8]${NC} View Status                        ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[h]${NC} Show Help                          ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${RED}[9]${NC} Exit                              ${CYAN}│${NC}"
+    echo -e "${CYAN}╰───────────────────────────────────────╯${NC}"
+    
+    # Footer
     echo
-    echo -e "${CYAN}Release Management${NC}"
-    echo -e "  ${BLUE}3)${NC} Start release"
-    echo -e "  ${BLUE}4)${NC} Finish release"
+    echo -e "       ${YELLOW}Type 'h' for workflow help${NC}"
     echo
-    echo -e "${CYAN}Hotfix Management${NC}"
-    echo -e "  ${BLUE}5)${NC} Start hotfix"
-    echo -e "  ${BLUE}6)${NC} Finish hotfix"
-    echo
-    echo -e "${CYAN}Other Actions${NC}"
-    echo -e "  ${BLUE}7)${NC} Create commit"
-    echo -e "  ${BLUE}8)${NC} View current status"
-    echo -e "  ${BLUE}h)${NC} Show workflow help"
-    echo -e "  ${RED}9)${NC} Exit"
-    echo
-    echo -e "${CYAN}Current Status${NC}"
-    echo -e "  Branch: $(git branch --show-current 2>/dev/null || echo 'Not a git repository')"
-    if git rev-parse --git-dir > /dev/null 2>&1; then
-        echo -e "  Changes: $(git status --porcelain | wc -l) file(s) modified"
-        echo -e "  Latest: $(git log -1 --pretty=format:'%h - %s' 2>/dev/null || echo 'No commits yet')"
-    fi
-    echo
-    echo -e "${CYAN}═══════════════════════════════════${NC}"
-    echo
-    read -p "Enter your choice [1-9,h]: " choice
+    
+    # Input
+    echo -e "${BOLD}Select an action${NC} ${BLUE}[1-9,h]${NC}: \c"
+    read choice
 }
 
 # Function to get feature name
@@ -762,20 +910,33 @@ get_version() {
     echo
 }
 
-# Function to show current status
+# Function to show current status with modern display
 show_status() {
+    clear
     echo
-    echo -e "${BOLD}Current Git Status${NC}"
-    echo -e "${CYAN}═══════════════════════════════════${NC}"
+    echo -e "${BOLD}             Git Status Overview${NC}"
     echo
-    echo -e "${BOLD}Current branch:${NC}"
-    git branch --show-current
-    echo
-    echo -e "${BOLD}Recent commits:${NC}"
-    git log --oneline -n 5
-    echo
-    echo -e "${BOLD}Working tree status:${NC}"
-    git status -s
+    echo -e "${CYAN}╭───────────────────────────────────────╮${NC}"
+    
+    # Branch Info
+    echo -e "${CYAN}│${NC} ${BOLD}Current Branch${NC}                         ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} $(git branch --show-current)                    ${CYAN}│${NC}"
+    echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
+    
+    # Recent Commits
+    echo -e "${CYAN}│${NC} ${BOLD}Recent Commits${NC}                         ${CYAN}│${NC}"
+    git log --oneline -n 5 | while read -r line; do
+        echo -e "${CYAN}│${NC} ${BLUE}$line${NC}                     ${CYAN}│${NC}"
+    done
+    echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
+    
+    # Working Tree Status
+    echo -e "${CYAN}│${NC} ${BOLD}Working Tree Status${NC}                    ${CYAN}│${NC}"
+    git status -s | while read -r line; do
+        echo -e "${CYAN}│${NC} ${YELLOW}$line${NC}                            ${CYAN}│${NC}"
+    done
+    
+    echo -e "${CYAN}╰───────────────────────────────────────╯${NC}"
     echo
     read -p "Press Enter to continue..."
 }
