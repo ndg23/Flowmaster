@@ -2,7 +2,7 @@
 
 ## [1.1.2-alpha.2] - 2025-02-15
 ### Ajouté
--  auto upgrade### Modifié
+-  upgrade-  auto upgrade### Modifié
 ### Corrigé
 ### Supprimé
 
@@ -10,13 +10,13 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 
 ## [1.1.2-alpha.2] - 2025-02-15
 ### Ajouté
--  auto upgrade### Modifié
+-  upgrade-  auto upgrade### Modifié
 ### Corrigé
 ### Supprimé
 
 ## [1.1.1-alpha.1] - 2025-02-15 (Alpha)
 ### Ajouté
--  auto upgrade- Upgrade changelog write
+-  upgrade-  auto upgrade- Upgrade changelog write
 ### Modifié
 - Change feature convention name
 ### Corrigé
@@ -26,7 +26,7 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 
 ## [1.1.0] - 2024-02-27
 ### Ajouté
--  auto upgrade- Interface CLI interactive avec menu coloré et emojis
+-  upgrade-  auto upgrade- Interface CLI interactive avec menu coloré et emojis
 - Gestion complète du workflow GitFlow
 - Système de commits conventionnels avec emojis
 - Validation automatique des noms de branches
@@ -55,7 +55,7 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 ## [1.0.1-alpha.1] - 2025-02-15
 ### ✨ Features
 ### Ajouté
--  auto upgrade-  upgrade changelo write
+-  upgrade-  auto upgrade-  upgrade changelo write
 ### Modifié
 - 
 ### Corrigé

@@ -47,15 +47,128 @@ get_current_version() {
     fi
 }
 
+# Function to suggest next version
+suggest_next_version() {
+    local current_version=$1
+    local versions=($(git ls-remote --tags --refs "$REPO_URL" | \
+                      awk -F'/' '{print $3}' | \
+                      sed 's/^v//' | \
+                      sort -t. -k1,1n -k2,2n -k3,3n))
+    
+    echo -e "\n${YELLOW}Versions disponibles :${NC}"
+    echo -e "${BLUE}Versions actuelles :${NC}"
+    for v in "${versions[@]}"; do
+        echo -e "  ${GREEN}$v${NC}"
+    done
+    
+    # Parse current version
+    if [[ $current_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-((alpha|beta|rc)\.([0-9]+)))?$ ]]; then
+        local major="${BASH_REMATCH[1]}"
+        local minor="${BASH_REMATCH[2]}"
+        local patch="${BASH_REMATCH[3]}"
+        local prerelease="${BASH_REMATCH[5]}"
+        local prerelease_num="${BASH_REMATCH[6]}"
+        
+        echo -e "\n${BLUE}Suggestions pour la prochaine version :${NC}"
+        
+        # Suggest next versions
+        if [ -z "$prerelease" ]; then
+            # For release versions
+            echo -e "1) ${GREEN}$major.$minor.$((patch+1))${NC} (patch)"
+            echo -e "2) ${GREEN}$major.$((minor+1)).0${NC} (minor)"
+            echo -e "3) ${GREEN}$((major+1)).0.0${NC} (major)"
+            echo -e "4) ${GREEN}$major.$minor.$patch-alpha.1${NC} (nouvelle alpha)"
+            echo -e "5) ${YELLOW}Version personnalisée${NC}"
+        else
+            # For pre-release versions
+            case "$prerelease" in
+                "alpha")
+                    echo -e "1) ${GREEN}$major.$minor.$patch-alpha.$((prerelease_num+1))${NC} (next alpha)"
+                    echo -e "2) ${GREEN}$major.$minor.$patch-beta.1${NC} (start beta)"
+                    echo -e "3) ${GREEN}$major.$minor.$patch${NC} (release finale)"
+                    ;;
+                "beta")
+                    echo -e "1) ${GREEN}$major.$minor.$patch-beta.$((prerelease_num+1))${NC} (next beta)"
+                    echo -e "2) ${GREEN}$major.$minor.$patch-rc.1${NC} (start rc)"
+                    echo -e "3) ${GREEN}$major.$minor.$patch${NC} (release finale)"
+                    ;;
+                "rc")
+                    echo -e "1) ${GREEN}$major.$minor.$patch-rc.$((prerelease_num+1))${NC} (next rc)"
+                    echo -e "2) ${GREEN}$major.$minor.$patch${NC} (release finale)"
+                    ;;
+            esac
+            echo -e "4) ${YELLOW}Version personnalisée${NC}"
+        fi
+        
+        # Get user choice
+        while true; do
+            read -p "Choisissez une option: " choice
+            case "$choice" in
+                1|2|3)
+                    if [ -z "$prerelease" ]; then
+                        case "$choice" in
+                            1) echo "$major.$minor.$((patch+1))";;
+                            2) echo "$major.$((minor+1)).0";;
+                            3) echo "$((major+1)).0.0";;
+                        esac
+                    else
+                        case "$prerelease" in
+                            "alpha")
+                                case "$choice" in
+                                    1) echo "$major.$minor.$patch-alpha.$((prerelease_num+1))";;
+                                    2) echo "$major.$minor.$patch-beta.1";;
+                                    3) echo "$major.$minor.$patch";;
+                                esac
+                                ;;
+                            "beta")
+                                case "$choice" in
+                                    1) echo "$major.$minor.$patch-beta.$((prerelease_num+1))";;
+                                    2) echo "$major.$minor.$patch-rc.1";;
+                                    3) echo "$major.$minor.$patch";;
+                                esac
+                                ;;
+                            "rc")
+                                case "$choice" in
+                                    1) echo "$major.$minor.$patch-rc.$((prerelease_num+1))";;
+                                    2) echo "$major.$minor.$patch";;
+                                esac
+                                ;;
+                        esac
+                    fi
+                    return 0
+                    ;;
+                4|5)
+                    read -p "Entrez la version personnalisée (format X.Y.Z[-prerelease.N]): " custom_version
+                    if [[ $custom_version =~ ^[0-9]+\.[0-9]+\.[0-9]+(-((alpha|beta|rc)\.[0-9]+))?$ ]]; then
+                        echo "$custom_version"
+                        return 0
+                    else
+                        error "Format de version invalide"
+                    fi
+                    ;;
+                *)
+                    echo -e "${RED}Option invalide${NC}"
+                    ;;
+            esac
+        done
+    else
+        error "Version actuelle invalide: $current_version"
+    fi
+}
+
 # Function to install or upgrade
 install_or_upgrade() {
     local force=$1
     local current_version=$(get_current_version)
-    local latest_version=$(get_latest_version)
     
-    if [ "$force" != "force" ] && [ "$current_version" = "$latest_version" ]; then
-        info "Vous avez déjà la dernière version (v$current_version)"
-        return 0
+    if [ "$force" = "force" ]; then
+        local latest_version=$(suggest_next_version "$current_version")
+    else
+        local latest_version=$(get_latest_version)
+        if [ "$current_version" = "$latest_version" ]; then
+            info "Vous avez déjà la dernière version (v$current_version)"
+            return 0
+        fi
     fi
     
     info "Installation de la version v$latest_version..."
