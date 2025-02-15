@@ -512,7 +512,6 @@ start_release() {
                     return 1
                 fi
                 info "Changements sauvegardés avec le nom: $stash_name"
-                # Variable pour restaurer le stash plus tard si nécessaire
                 local used_stash=true
                 ;;
             *)
