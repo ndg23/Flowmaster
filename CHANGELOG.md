@@ -1,8 +1,14 @@
 # Journal des modifications
 
+## [1.1.2-alpha.2] - 2025-02-15
+### Ajouté
+### Modifié
+### Corrigé
+### Supprimé
+
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
-## [Unreleased]
+## [1.1.2-alpha.2] - 2025-02-15
 ### Ajouté
 ### Modifié
 ### Corrigé
