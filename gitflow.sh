@@ -489,17 +489,20 @@ start_release() {
     echo
     echo -e "${BOLD}Démarrage d'une nouvelle Release${NC}"
     echo -e "${CYAN}═══════════════════════════════════${NC}"
-    echo
     
     # Get current version from latest tag
     local current_version=$(get_current_version)
     local versions=($(git tag -l | grep '^v' | sed 's/^v//' | sort -t. -k1,1n -k2,2n -k3,3n))
     
-    echo -e "${YELLOW}Tags existants :${NC}"
+    echo -e "\n${YELLOW}Version actuelle : ${GREEN}$current_version${NC}"
+    echo -e "\n${YELLOW}Historique des versions :${NC}"
     for v in "${versions[@]}"; do
-        echo -e "  ${GREEN}$v${NC}"
+        if [[ $v == $current_version ]]; then
+            echo -e "  ${GREEN}$v${NC} ${YELLOW}(actuelle)${NC}"
+        else
+            echo -e "  ${BLUE}$v${NC}"
+        fi
     done
-    echo
     
     # Parse current version
     if [[ $current_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-((alpha|beta|rc)\.([0-9]+)))?$ ]]; then
@@ -509,74 +512,99 @@ start_release() {
         local prerelease="${BASH_REMATCH[5]}"
         local prerelease_num="${BASH_REMATCH[6]}"
         
-        echo -e "${BLUE}Suggestions pour la prochaine version :${NC}"
+        echo -e "\n${CYAN}╭───────────────────────────────────────╮${NC}"
+        echo -e "${CYAN}│${NC} ${BOLD}Suggestions de versions${NC}                  ${CYAN}│${NC}"
         
         # Suggest next versions based on current state
         if [ -z "$prerelease" ]; then
-            # For release versions
-            echo -e "1) ${GREEN}$major.$minor.$((patch+1))${NC} (patch - corrections de bugs)"
-            echo -e "2) ${GREEN}$major.$((minor+1)).0${NC} (minor - nouvelles fonctionnalités)"
-            echo -e "3) ${GREEN}$((major+1)).0.0${NC} (major - changements majeurs)"
-            echo -e "4) ${GREEN}$major.$minor.$patch-alpha.1${NC} (nouvelle alpha)"
-            echo -e "5) ${YELLOW}Version personnalisée${NC}"
+            echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
+            echo -e "${CYAN}│${NC} ${BOLD}Versions stables${NC}                        ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC} ${BLUE}[1]${NC} ${GREEN}$major.$minor.$((patch+1))${NC} (patch)          ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC} ${BLUE}[2]${NC} ${GREEN}$major.$((minor+1)).0${NC} (minor)            ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC} ${BLUE}[3]${NC} ${GREEN}$((major+1)).0.0${NC} (major)              ${CYAN}│${NC}"
+            echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
+            echo -e "${CYAN}│${NC} ${BOLD}Pré-releases${NC}                           ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC} ${BLUE}[4]${NC} ${GREEN}$major.$minor.$patch-alpha.1${NC} (alpha)    ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC} ${BLUE}[5]${NC} ${GREEN}$major.$minor.$patch-beta.1${NC} (beta)     ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC} ${BLUE}[6]${NC} ${GREEN}$major.$minor.$patch-rc.1${NC} (rc)        ${CYAN}│${NC}"
         else
-            # For pre-release versions
+            echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
             case "$prerelease" in
                 "alpha")
-                    echo -e "1) ${GREEN}$major.$minor.$patch-alpha.$((prerelease_num+1))${NC} (prochaine alpha)"
-                    echo -e "2) ${GREEN}$major.$minor.$patch-beta.1${NC} (début beta)"
-                    echo -e "3) ${GREEN}$major.$minor.$patch${NC} (version finale)"
+                    echo -e "${CYAN}│${NC} ${BLUE}[1]${NC} ${GREEN}$major.$minor.$patch-alpha.$((prerelease_num+1))${NC}   ${CYAN}│${NC}"
+                    echo -e "${CYAN}│${NC}     Prochaine version alpha              ${CYAN}│${NC}"
+                    echo -e "${CYAN}│${NC} ${BLUE}[2]${NC} ${GREEN}$major.$minor.$patch-beta.1${NC}              ${CYAN}│${NC}"
+                    echo -e "${CYAN}│${NC}     Passer en beta                       ${CYAN}│${NC}"
+                    echo -e "${CYAN}│${NC} ${BLUE}[3]${NC} ${GREEN}$major.$minor.$patch${NC}                     ${CYAN}│${NC}"
+                    echo -e "${CYAN}│${NC}     Version finale                       ${CYAN}│${NC}"
                     ;;
                 "beta")
-                    echo -e "1) ${GREEN}$major.$minor.$patch-beta.$((prerelease_num+1))${NC} (prochaine beta)"
-                    echo -e "2) ${GREEN}$major.$minor.$patch-rc.1${NC} (début rc)"
-                    echo -e "3) ${GREEN}$major.$minor.$patch${NC} (version finale)"
+                    echo -e "${CYAN}│${NC} ${BLUE}[1]${NC} ${GREEN}$major.$minor.$patch-beta.$((prerelease_num+1))${NC}    ${CYAN}│${NC}"
+                    echo -e "${CYAN}│${NC}     Prochaine version beta               ${CYAN}│${NC}"
+                    echo -e "${CYAN}│${NC} ${BLUE}[2]${NC} ${GREEN}$major.$minor.$patch-rc.1${NC}               ${CYAN}│${NC}"
+                    echo -e "${CYAN}│${NC}     Passer en release candidate          ${CYAN}│${NC}"
+                    echo -e "${CYAN}│${NC} ${BLUE}[3]${NC} ${GREEN}$major.$minor.$patch${NC}                     ${CYAN}│${NC}"
+                    echo -e "${CYAN}│${NC}     Version finale                       ${CYAN}│${NC}"
                     ;;
                 "rc")
-                    echo -e "1) ${GREEN}$major.$minor.$patch-rc.$((prerelease_num+1))${NC} (prochaine rc)"
-                    echo -e "2) ${GREEN}$major.$minor.$patch${NC} (version finale)"
+                    echo -e "${CYAN}│${NC} ${BLUE}[1]${NC} ${GREEN}$major.$minor.$patch-rc.$((prerelease_num+1))${NC}     ${CYAN}│${NC}"
+                    echo -e "${CYAN}│${NC}     Prochaine release candidate          ${CYAN}│${NC}"
+                    echo -e "${CYAN}│${NC} ${BLUE}[2]${NC} ${GREEN}$major.$minor.$patch${NC}                     ${CYAN}│${NC}"
+                    echo -e "${CYAN}│${NC}     Version finale                       ${CYAN}│${NC}"
                     ;;
             esac
-            echo -e "4) ${YELLOW}Version personnalisée${NC}"
         fi
+        echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
+        echo -e "${CYAN}│${NC} ${BLUE}[0]${NC} Version personnalisée                 ${CYAN}│${NC}"
+        echo -e "${CYAN}╰───────────────────────────────────────╯${NC}"
         
         echo
-        echo -e "${BLUE}Choisissez une option ou entrez une version personnalisée :${NC}"
+        echo -e "${BLUE}Choisissez une option ou entrez une version :${NC}"
         read -p "> " choice
         
-        # Process user choice
         case "$choice" in
-            1|2|3|4)
-                if [ -z "$prerelease" ]; then
-                    case "$choice" in
-                        1) version="$major.$minor.$((patch+1))";;
-                        2) version="$major.$((minor+1)).0";;
-                        3) version="$((major+1)).0.0";;
-                        4) version="$major.$minor.$patch-alpha.1";;
-                    esac
+            [0-9]*)
+                if [ "$choice" = "0" ]; then
+                    echo -e "\nEntrez la version personnalisée (X.Y.Z[-prerelease.N]):"
+                    read -p "> " version
                 else
-                    case "$prerelease" in
-                        "alpha")
-                            case "$choice" in
-                                1) version="$major.$minor.$patch-alpha.$((prerelease_num+1))";;
-                                2) version="$major.$minor.$patch-beta.1";;
-                                3) version="$major.$minor.$patch";;
-                            esac
-                            ;;
-                        "beta")
-                            case "$choice" in
-                                1) version="$major.$minor.$patch-beta.$((prerelease_num+1))";;
-                                2) version="$major.$minor.$patch-rc.1";;
-                                3) version="$major.$minor.$patch";;
-                            esac
-                            ;;
-                        "rc")
-                            case "$choice" in
-                                1) version="$major.$minor.$patch-rc.$((prerelease_num+1))";;
-                                2) version="$major.$minor.$patch";;
-                            esac
-                            ;;
-                    esac
+                    if [ -z "$prerelease" ]; then
+                        case "$choice" in
+                            1) version="$major.$minor.$((patch+1))";;
+                            2) version="$major.$((minor+1)).0";;
+                            3) version="$((major+1)).0.0";;
+                            4) version="$major.$minor.$patch-alpha.1";;
+                            5) version="$major.$minor.$patch-beta.1";;
+                            6) version="$major.$minor.$patch-rc.1";;
+                            *) version="$choice";;
+                        esac
+                    else
+                        case "$prerelease" in
+                            "alpha")
+                                case "$choice" in
+                                    1) version="$major.$minor.$patch-alpha.$((prerelease_num+1))";;
+                                    2) version="$major.$minor.$patch-beta.1";;
+                                    3) version="$major.$minor.$patch";;
+                                    *) version="$choice";;
+                                esac
+                                ;;
+                            "beta")
+                                case "$choice" in
+                                    1) version="$major.$minor.$patch-beta.$((prerelease_num+1))";;
+                                    2) version="$major.$minor.$patch-rc.1";;
+                                    3) version="$major.$minor.$patch";;
+                                    *) version="$choice";;
+                                esac
+                                ;;
+                            "rc")
+                                case "$choice" in
+                                    1) version="$major.$minor.$patch-rc.$((prerelease_num+1))";;
+                                    2) version="$major.$minor.$patch";;
+                                    *) version="$choice";;
+                                esac
+                                ;;
+                        esac
+                    fi
                 fi
                 ;;
             *)
