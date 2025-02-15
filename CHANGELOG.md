@@ -1,5 +1,11 @@
 # Journal des modifications
 
+## [Unreleased]
+### Ajouté
+### Modifié
+### Corrigé
+### Supprimé
+
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
 ## [1.1.0] - 2024-02-27
@@ -42,8 +48,8 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 - Validation des connexions au dépôt distant
 - Gestion sécurisée des credentials Git
 
-## [Unreleased]
-### Ajouté
+## [1.0.1-alpha.1] - 2025-02-15
+### ✨ Features### Ajouté
 ### Modifié
 ### Corrigé
 ### Supprimé
