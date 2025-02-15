@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# At the beginning of the file, add version
+VERSION="1.1.2-alpha.2"
+
 # Colors for better readability
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -232,15 +235,148 @@ start_feature() {
     success "Successfully created feature branch: $branch_name"
 }
 
+# Function to handle git errors
+handle_git_error() {
+    local error_msg=$1
+    local action=$2
+
+    if [[ $error_msg =~ "refusing to merge unrelated histories" ]]; then
+        error "Les historiques des branches sont différents." "no_exit"
+        echo -e "\n${YELLOW}Options disponibles :${NC}"
+        echo -e "1) Forcer le merge avec --allow-unrelated-histories"
+        echo -e "2) Annuler l'opération"
+        read -p "Choisissez une option [1-2]: " choice
+        
+        case $choice in
+            1)
+                info "Tentative de merge forcé..."
+                if ! git merge --allow-unrelated-histories "$action"; then
+                    error "Échec du merge forcé. Résolvez les conflits manuellement."
+                fi
+                ;;
+            *)
+                error "Opération annulée"
+                ;;
+        esac
+        return 1
+    elif [[ $error_msg =~ "Permission denied" ]]; then
+        error "Permissions Git insuffisantes. Vérifiez vos droits d'accès." "no_exit"
+        echo -e "\n${YELLOW}Suggestions :${NC}"
+        echo -e "1) Vérifiez vos clés SSH"
+        echo -e "2) Vérifiez vos permissions sur le dépôt"
+        echo -e "3) Contactez votre administrateur"
+        return 1
+    elif [[ $error_msg =~ "cannot lock ref" ]]; then
+        error "Impossible de verrouiller la référence. Un autre processus Git est peut-être en cours." "no_exit"
+        echo -e "\n${YELLOW}Solutions possibles :${NC}"
+        echo -e "1) Attendez quelques instants et réessayez"
+        echo -e "2) Vérifiez les processus Git en cours"
+        echo -e "3) Supprimez manuellement les fichiers .lock si nécessaire"
+        return 1
+    elif [[ $error_msg =~ "conflict" ]]; then
+        error "Conflits détectés." "no_exit"
+        echo -e "\n${YELLOW}Options :${NC}"
+        echo -e "1) Résoudre les conflits manuellement"
+        echo -e "2) Annuler le merge"
+        read -p "Choisissez une option [1-2]: " choice
+        
+        case $choice in
+            1)
+                info "Résolvez les conflits puis utilisez:"
+                echo -e "git add <fichiers>"
+                echo -e "git commit -m 'resolve conflicts'"
+                ;;
+            *)
+                git merge --abort
+                error "Merge annulé"
+                ;;
+        esac
+        return 1
+    fi
+    
+    # Erreur générique
+    error "Une erreur Git s'est produite: $error_msg"
+    return 1
+}
+
+# Function to safely execute git commands
+safe_git_command() {
+    local command=$1
+    local error_context=$2
+    local output
+    
+    # Exécute la commande et capture la sortie et l'erreur
+    if ! output=$(eval "$command" 2>&1); then
+        handle_git_error "$output" "$error_context"
+        return 1
+    fi
+    return 0
+}
+
 # Function to finish a feature
 finish_feature() {
-    ensure_clean_work_tree || return 1
-    check_remote_connection || return 1
-    
     local current_branch=$(git symbolic-ref --short HEAD)
     validate_branch_name "$current_branch" "feature"
     
     info "Finishing feature branch: $current_branch"
+    
+    # Variable to track if we used stash
+    local used_stash=false
+    local stash_name=""
+    
+    # Check for uncommitted changes
+    if ! git diff-index --quiet HEAD --; then
+        error "Des changements non commités ont été détectés." "no_exit"
+        echo -e "\n${YELLOW}Options disponibles :${NC}"
+        echo -e "1) Commiter les changements"
+        echo -e "2) Stash les changements"
+        echo -e "3) Annuler l'opération"
+        read -p "Choisissez une option [1-3]: " choice
+        
+        case $choice in
+            1)
+                # Create commit
+                create_commit
+                if [ $? -ne 0 ]; then
+                    error "Échec de la création du commit"
+                    return 1
+                fi
+                ;;
+            2)
+                # Stash changes
+                info "Sauvegarde des changements..."
+                stash_name="feature_finish_$(date +%s)"
+                if ! git stash push -m "$stash_name"; then
+                    error "Échec de la sauvegarde des changements"
+                    return 1
+                fi
+                used_stash=true
+                info "Changements sauvegardés avec le nom: $stash_name"
+                ;;
+            *)
+                error "Opération annulée"
+                return 1
+                ;;
+        esac
+    fi
+    
+    # Function to restore stash if needed
+    restore_stash() {
+        if [ "$used_stash" = true ]; then
+            info "Restauration des changements sauvegardés..."
+            local stash_index=$(git stash list | grep "$stash_name" | cut -d: -f1)
+            if [ ! -z "$stash_index" ]; then
+                if ! git stash apply "$stash_index"; then
+                    warning "Impossible de restaurer les changements stashés automatiquement."
+                    echo -e "${YELLOW}Vos changements sont toujours dans le stash avec le nom: $stash_name${NC}"
+                    echo -e "Utilisez '${GREEN}git stash list${NC}' pour voir tous les stash"
+                    echo -e "Utilisez '${GREEN}git stash apply${NC}' pour les restaurer manuellement"
+                else
+                    git stash drop "$stash_index"
+                fi
+            fi
+        fi
+    }
     
     # Check if branch exists on remote
     local has_remote=false
@@ -249,26 +385,68 @@ finish_feature() {
     fi
     
     # Update develop branch
-    git checkout develop || error "Failed to checkout develop branch"
-    git pull origin develop || error "Failed to pull latest develop changes"
+    info "Mise à jour de la branche develop..."
+    if ! safe_git_command "git checkout develop" "develop"; then
+        restore_stash
+        return 1
+    fi
+    
+    if ! safe_git_command "git pull origin develop" "develop"; then
+        restore_stash
+        return 1
+    fi
     
     # Merge feature branch
-    git merge --no-ff "$current_branch" || error "Failed to merge feature branch"
+    info "Fusion de la branche feature..."
+    if ! safe_git_command "git merge --no-ff '$current_branch'" "$current_branch"; then
+        error "Conflit détecté lors de la fusion." "no_exit"
+        echo -e "\n${YELLOW}Options disponibles :${NC}"
+        echo -e "1) Résoudre les conflits manuellement"
+        echo -e "2) Annuler la fusion"
+        read -p "Choisissez une option [1-2]: " choice
+        
+        case $choice in
+            1)
+                info "Résolvez les conflits puis utilisez:"
+                echo -e "git add <fichiers>"
+                echo -e "git commit -m 'resolve conflicts'"
+                restore_stash
+                return 1
+                ;;
+            *)
+                git merge --abort
+                restore_stash
+                error "Fusion annulée"
+                return 1
+                ;;
+        esac
+    fi
     
     # Push changes
-    git push origin develop || error "Failed to push changes to develop"
+    info "Push des changements..."
+    if ! safe_git_command "git push origin develop" "develop"; then
+        restore_stash
+        return 1
+    fi
     
     # Delete feature branch locally
-    git branch -d "$current_branch" || warning "Failed to delete local feature branch"
+    info "Suppression de la branche locale..."
+    if ! safe_git_command "git branch -d '$current_branch'" "$current_branch"; then
+        warning "Impossible de supprimer la branche locale"
+    fi
     
     # Delete remote branch only if it exists
     if [ "$has_remote" = true ]; then
-        git push origin --delete "$current_branch" || warning "Failed to delete remote feature branch"
-    else
-        info "Remote feature branch does not exist, skipping remote deletion"
+        info "Suppression de la branche distante..."
+        if ! safe_git_command "git push origin --delete '$current_branch'" "$current_branch"; then
+            warning "Impossible de supprimer la branche distante"
+        fi
     fi
     
-    success "Successfully finished feature: $current_branch"
+    success "Feature terminée avec succès: $current_branch"
+    
+    # Restore stashed changes at the end if everything went well
+    restore_stash
 }
 
 # Function to validate version format
@@ -277,10 +455,26 @@ validate_version() {
     local allow_prerelease=$2
     
     if [[ $allow_prerelease == "true" ]]; then
+        # Validate version with optional pre-release tag
         if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+(-((alpha|beta|rc)\.[0-9]+))?$ ]]; then
-            error "Version must follow semantic versioning: X.Y.Z[-prerelease]\nExamples: 1.0.0, 1.1.0-alpha.1, 2.0.0-beta.2, 1.2.0-rc.1"
+            error "Version must follow semantic versioning: X.Y.Z[-prerelease]
+Examples:
+- 1.0.0 (Release finale)
+- 1.0.0-alpha.1 (Alpha release)
+- 1.0.0-beta.1 (Beta release)
+- 1.0.0-rc.1 (Release Candidate)"
+        fi
+        
+        # If it's a pre-release, show appropriate message
+        if [[ $version =~ -alpha ]]; then
+            info "Creating alpha release for internal testing"
+        elif [[ $version =~ -beta ]]; then
+            info "Creating beta release for external testing"
+        elif [[ $version =~ -rc ]]; then
+            info "Creating release candidate for final testing"
         fi
     else
+        # For hotfix versions, only allow final versions
         if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             error "Version must follow semantic versioning: X.Y.Z"
         fi
@@ -290,44 +484,142 @@ validate_version() {
 # Function to start a release
 start_release() {
     ensure_clean_work_tree || return 1
-    check_repository_config || return 1
     check_remote_connection || return 1
-    ensure_develop_branch || return 1
     
-    local version=$1
-    validate_version "$version" "true"
+    # Get current version from latest tag
+    local current_version=$(get_current_version)
+    local versions=($(git tag -l | grep '^v' | sed 's/^v//' | sort -t. -k1,1n -k2,2n -k3,3n))
     
-    local branch_name="release/v$version"
+    # Clear screen and show header
+    clear
+    echo -e "${BOLD}Démarrage d'une nouvelle Release${NC}"
+    echo -e "${CYAN}═══════════════════════════════════${NC}"
     
-    info "Starting release: $version"
+    echo -e "\n${YELLOW}Version actuelle : ${GREEN}$current_version${NC}"
+    echo -e "\n${YELLOW}Historique des versions :${NC}"
+    for v in "${versions[@]}"; do
+        if [[ $v == $current_version ]]; then
+            echo -e "  ${GREEN}$v${NC} ${YELLOW}(actuelle)${NC}"
+        else
+            echo -e "  ${BLUE}$v${NC}"
+        fi
+    done
     
-    # Try to pull with more detailed error handling
-    if ! git pull origin develop; then
-        error "Failed to pull from develop branch. Please check your:"
-        echo -e "1. Internet connection"
-        echo -e "2. Remote repository configuration"
-        echo -e "3. Branch permissions"
-        echo -e "\nRemote configuration:"
-        git remote -v
+    # Parse current version for suggestions
+    if [[ $current_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-((alpha|beta|rc)\.([0-9]+)))?$ ]]; then
+        local major="${BASH_REMATCH[1]}"
+        local minor="${BASH_REMATCH[2]}"
+        local patch="${BASH_REMATCH[3]}"
+        local prerelease="${BASH_REMATCH[5]}"
+        local prerelease_num="${BASH_REMATCH[6]}"
+        
+        echo -e "\n${CYAN}╭───────────────────────────────────────╮${NC}"
+        echo -e "${CYAN}│${NC} ${BOLD}Suggestions de versions${NC}                  ${CYAN}│${NC}"
+        echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
+        
+        if [[ $prerelease == "alpha" ]]; then
+            echo -e "${CYAN}│${NC} ${BLUE}[1]${NC} ${GREEN}$major.$minor.$patch-alpha.$((prerelease_num+1))${NC}   ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC}     Prochaine version alpha              ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC} ${BLUE}[2]${NC} ${GREEN}$major.$minor.$patch-beta.1${NC}              ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC}     Passer en beta                       ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC} ${BLUE}[3]${NC} ${GREEN}$major.$minor.$patch${NC}                     ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC}     Version finale                       ${CYAN}│${NC}"
+        elif [[ $prerelease == "beta" ]]; then
+            echo -e "${CYAN}│${NC} ${BLUE}[1]${NC} ${GREEN}$major.$minor.$patch-beta.$((prerelease_num+1))${NC}    ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC}     Prochaine version beta               ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC} ${BLUE}[2]${NC} ${GREEN}$major.$minor.$patch-rc.1${NC}               ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC}     Passer en release candidate          ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC} ${BLUE}[3]${NC} ${GREEN}$major.$minor.$patch${NC}                     ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC}     Version finale                       ${CYAN}│${NC}"
+        elif [[ $prerelease == "rc" ]]; then
+            echo -e "${CYAN}│${NC} ${BLUE}[1]${NC} ${GREEN}$major.$minor.$patch-rc.$((prerelease_num+1))${NC}     ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC}     Prochaine release candidate          ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC} ${BLUE}[2]${NC} ${GREEN}$major.$minor.$patch${NC}                     ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC}     Version finale                       ${CYAN}│${NC}"
+        else
+            # For stable versions
+            echo -e "${CYAN}│${NC} ${BOLD}Versions stables${NC}                        ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC} ${BLUE}[1]${NC} ${GREEN}$major.$minor.$((patch+1))${NC} (patch)          ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC} ${BLUE}[2]${NC} ${GREEN}$major.$((minor+1)).0${NC} (minor)            ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC} ${BLUE}[3]${NC} ${GREEN}$((major+1)).0.0${NC} (major)              ${CYAN}│${NC}"
+            echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
+            echo -e "${CYAN}│${NC} ${BOLD}Pré-releases${NC}                           ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC} ${BLUE}[4]${NC} ${GREEN}$major.$minor.$((patch+1))-alpha.1${NC} (alpha)${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC} ${BLUE}[5]${NC} ${GREEN}$major.$minor.$((patch+1))-beta.1${NC} (beta) ${CYAN}│${NC}"
+            echo -e "${CYAN}│${NC} ${BLUE}[6]${NC} ${GREEN}$major.$minor.$((patch+1))-rc.1${NC} (rc)    ${CYAN}│${NC}"
+        fi
+        
+        echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
+        echo -e "${CYAN}│${NC} ${BLUE}[0]${NC} Version personnalisée                 ${CYAN}│${NC}"
+        echo -e "${CYAN}╰───────────────────────────────────────╯${NC}"
+        
+        echo -e "\n${BLUE}Choisissez une option ou entrez une version :${NC}"
+        read -p "> " choice
+        
+        # Process user choice
+        case "$choice" in
+            "0")
+                echo -e "\nEntrez la version personnalisée (X.Y.Z[-prerelease.N]):"
+                read -p "> " version
+                ;;
+            [1-6])
+                version=$(get_version_from_choice "$choice" "$major" "$minor" "$patch" "$prerelease" "$prerelease_num")
+                ;;
+            *)
+                version="$choice"
+                ;;
+        esac
+    else
+        error "Version actuelle invalide: $current_version"
         return 1
     fi
     
-    git checkout -b "$branch_name" || error "Failed to create release branch"
+    # Validate version format
+    validate_version "$version" "true" || return 1
     
-    # Update version in package.json without git tag
-    if [[ $version =~ -(.+)$ ]]; then
-        # For pre-release versions, use the full version string
-        npm version "$version" --no-git-tag-version || error "Failed to update version in package.json"
-    else
-        # For stable versions, just update the version
-        npm version "$version" --no-git-tag-version || error "Failed to update version in package.json"
-    fi
-    
-    git add package.json package-lock.json
-    git commit -m "chore: bump version to $version"
-    git push origin "$branch_name"
-    
+    # Create release branch
+    local branch_name="release/v$version"
+    info "Creating release branch: $branch_name"
+    git checkout -b "$branch_name" develop || error "Failed to create release branch"
     success "Successfully created release branch: $branch_name"
+}
+
+# Helper function to get version from choice
+get_version_from_choice() {
+    local choice=$1
+    local major=$2
+    local minor=$3
+    local patch=$4
+    local prerelease=$5
+    local prerelease_num=$6
+    
+    if [[ $prerelease == "alpha" ]]; then
+        case "$choice" in
+            1) echo "$major.$minor.$patch-alpha.$((prerelease_num+1))";;
+            2) echo "$major.$minor.$patch-beta.1";;
+            3) echo "$major.$minor.$patch";;
+        esac
+    elif [[ $prerelease == "beta" ]]; then
+        case "$choice" in
+            1) echo "$major.$minor.$patch-beta.$((prerelease_num+1))";;
+            2) echo "$major.$minor.$patch-rc.1";;
+            3) echo "$major.$minor.$patch";;
+        esac
+    elif [[ $prerelease == "rc" ]]; then
+        case "$choice" in
+            1) echo "$major.$minor.$patch-rc.$((prerelease_num+1))";;
+            2) echo "$major.$minor.$patch";;
+        esac
+    else
+        case "$choice" in
+            1) echo "$major.$minor.$((patch+1))";;
+            2) echo "$major.$((minor+1)).0";;
+            3) echo "$((major+1)).0.0";;
+            4) echo "$major.$minor.$((patch+1))-alpha.1";;
+            5) echo "$major.$minor.$((patch+1))-beta.1";;
+            6) echo "$major.$minor.$((patch+1))-rc.1";;
+        esac
+    fi
 }
 
 # Function to finish a release
@@ -562,43 +854,49 @@ update_changelog() {
         echo "# Journal des modifications
 
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
+
+## [Unreleased]
+### Ajouté
+### Modifié
+### Corrigé
+### Supprimé
 " > "$changelog_file"
-    fi
-    
-    # Check if we have an Unreleased section
-    if ! grep -q "## \[Unreleased\]" "$changelog_file"; then
-        sed -i.bak "1a\\
-\\
-## [Unreleased]\\
-### Ajouté\\
-### Modifié\\
-### Corrigé\\
-### Supprimé\\
-" "$changelog_file"
-        rm -f "$changelog_file.bak"
     fi
     
     # Determine the section based on commit type
     local section
-    if [[ "$commit_msg" == feat* ]]; then
+    local entry
+    
+    if [[ "$commit_msg" =~ ^feat ]]; then
         section="### Ajouté"
-    elif [[ "$commit_msg" == fix* ]]; then
+        entry=$(echo "$commit_msg" | sed -E 's/^feat(\([^)]+\))?:\s*//')
+    elif [[ "$commit_msg" =~ ^fix ]]; then
         section="### Corrigé"
+        entry=$(echo "$commit_msg" | sed -E 's/^fix(\([^)]+\))?:\s*//')
     elif [[ "$commit_msg" =~ ^(refactor|style|perf) ]]; then
         section="### Modifié"
-    elif [[ "$commit_msg" == revert* ]]; then
+        entry=$(echo "$commit_msg" | sed -E 's/^(refactor|style|perf)(\([^)]+\))?:\s*//')
+    elif [[ "$commit_msg" =~ ^revert ]]; then
         section="### Supprimé"
+        entry=$(echo "$commit_msg" | sed -E 's/^revert(\([^)]+\))?:\s*//')
     fi
     
     # Add entry if section was determined
-    if [ ! -z "$section" ]; then
-        # Clean up commit message for changelog
-        local entry=$(echo "$commit_msg" | sed -E 's/^(feat|fix|refactor|style|perf|revert)(\([^)]+\))?:\s*//')
+    if [ ! -z "$section" ] && [ ! -z "$entry" ]; then
+        # Check if section exists in Unreleased, if not add it
+        if ! grep -q "^$section" "$changelog_file"; then
+            sed -i.bak "/## \[Unreleased\]/a\\
+$section" "$changelog_file"
+            rm -f "$changelog_file.bak"
+        fi
+        
+        # Add the entry under the appropriate section
         sed -i.bak "/^$section/a\\
 - $entry" "$changelog_file"
         rm -f "$changelog_file.bak"
         
         git add "$changelog_file"
+        info "Updated CHANGELOG.md with: $entry"
     fi
 }
 
@@ -608,48 +906,77 @@ finalize_changelog() {
     local changelog_file="CHANGELOG.md"
     local today=$(date +%Y-%m-%d)
     
-    # Get GAFAM compatibility info
-    echo -e "\n${YELLOW}Enter compatibility information:${NC}"
-    echo -e "${BLUE}Format examples:${NC}"
-    echo -e "  Google Chrome 120+"
-    echo -e "  Safari 17+"
-    echo -e "  Firefox 122+"
-    echo -e "  Edge 120+"
-    echo -e "  Opera 105+"
-    
-    # Get browser compatibility
-    browsers=()
-    for browser in "Google Chrome" "Safari" "Firefox" "Edge" "Opera"; do
-        while true; do
-            echo -e "\n${YELLOW}Enter minimum $browser version (e.g., 120+) or press enter to skip:${NC}"
-            read -r version_info
-            if [[ -z "$version_info" ]]; then
-                break
-            elif [[ $version_info =~ ^[0-9]+\+$ ]]; then
-                browsers+=("$browser $version_info")
-                break
-            else
-                echo -e "${RED}Invalid version format. Please use format: NUMBER+ (e.g., 120+)${NC}"
-            fi
-        done
-    done
-    
-    # Construct browser compatibility string
-    compatibility=""
-    if [ ${#browsers[@]} -gt 0 ]; then
-        compatibility=" | Compatible avec : ${browsers[0]}"
-        for ((i=1; i<${#browsers[@]}; i++)); do
-            compatibility="$compatibility, ${browsers[$i]}"
-        done
+    # Check if tag already exists
+    if git rev-parse "v$version" >/dev/null 2>&1; then
+        error "Le tag v$version existe déjà." "no_exit"
+        echo -e "\n${YELLOW}Options disponibles :${NC}"
+        echo -e "1) Supprimer et recréer le tag"
+        echo -e "2) Incrémenter la version"
+        echo -e "3) Annuler l'opération"
+        read -p "Choisissez une option [1-3]: " choice
+        
+        case $choice in
+            1)
+                info "Suppression du tag existant..."
+                if ! git tag -d "v$version" >/dev/null 2>&1; then
+                    error "Impossible de supprimer le tag"
+                    return 1
+                fi
+                if ! git push origin ":refs/tags/v$version" >/dev/null 2>&1; then
+                    warning "Impossible de supprimer le tag distant"
+                fi
+                ;;
+            2)
+                # Incrémenter automatiquement la version
+                if [[ $version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-((alpha|beta|rc)\.([0-9]+)))?$ ]]; then
+                    local major="${BASH_REMATCH[1]}"
+                    local minor="${BASH_REMATCH[2]}"
+                    local patch="${BASH_REMATCH[3]}"
+                    local prerelease="${BASH_REMATCH[5]}"
+                    local prerelease_num="${BASH_REMATCH[6]}"
+                    
+                    if [ ! -z "$prerelease" ]; then
+                        # Incrémenter le numéro de pre-release
+                        prerelease_num=$((prerelease_num + 1))
+                        version="$major.$minor.$patch-$prerelease.$prerelease_num"
+                    else
+                        # Incrémenter le patch
+                        patch=$((patch + 1))
+                        version="$major.$minor.$patch"
+                    fi
+                    
+                    info "Nouvelle version : $version"
+                    read -p "Continuer avec cette version ? [Y/n] " response
+                    if [[ "$response" =~ ^[Nn]$ ]]; then
+                        error "Opération annulée"
+                        return 1
+                    fi
+                else
+                    error "Format de version invalide"
+                    return 1
+                fi
+                ;;
+            *)
+                error "Opération annulée"
+                return 1
+                ;;
+        esac
     fi
     
-    # Replace [Unreleased] with new version including compatibility info
-    local version_header="## [$version] - $today$compatibility"
-    sed -i.bak "s/## \[Unreleased\]/$version_header/" "$changelog_file"
-    rm -f "$changelog_file.bak"
+    # Replace [Unreleased] with new version
+    local version_header="## [$version] - $today"
     
-    # Add new Unreleased section
-    sed -i.bak "1a\\
+    # Add pre-release indicator if applicable
+    if [[ $version =~ -alpha ]]; then
+        version_header="$version_header (Alpha)"
+    elif [[ $version =~ -beta ]]; then
+        version_header="$version_header (Beta)"
+    elif [[ $version =~ -rc ]]; then
+        version_header="$version_header (Release Candidate)"
+    fi
+    
+    # Insert new version after the header, keeping Unreleased at top
+    sed -i.bak "/# Journal des modifications/a\\
 \\
 ## [Unreleased]\\
 ### Ajouté\\
@@ -659,16 +986,41 @@ finalize_changelog() {
 " "$changelog_file"
     rm -f "$changelog_file.bak"
     
+    # Replace old Unreleased with new version
+    sed -i.bak "s/## \[Unreleased\].*$/## [$version] - $today/" "$changelog_file"
+    rm -f "$changelog_file.bak"
+    
     # Remove empty sections in the current release
     sed -i.bak "/$version_header/,/^## /{/^### .*/{N;/\n$/d}}" "$changelog_file"
     rm -f "$changelog_file.bak"
     
+    # Create git tag with changelog content
+    local tag_message=$(awk "/^## \[$version\]/,/^## /{print}" "$changelog_file" | sed '/^## \[/d;/^## /q' | sed '/^$/d')
+    
     git add "$changelog_file"
     git commit -m "chore: mise à jour du changelog pour la version $version"
     
-    # Show the final version header
-    echo -e "\n${GREEN}Version header created:${NC}"
-    echo -e "${BLUE}$version_header${NC}\n"
+    # Create annotated tag with changelog content
+    if ! git tag -a "v$version" -m "Version $version
+
+$tag_message"; then
+        error "Impossible de créer le tag v$version"
+        return 1
+    fi
+    
+    # Show the final version header with appropriate message
+    echo -e "\n${GREEN}Version $version finalisée :${NC}"
+    if [[ $version =~ -alpha ]]; then
+        echo -e "${YELLOW}Version Alpha pour tests internes${NC}"
+    elif [[ $version =~ -beta ]]; then
+        echo -e "${YELLOW}Version Beta pour tests externes${NC}"
+    elif [[ $version =~ -rc ]]; then
+        echo -e "${YELLOW}Version Release Candidate pour tests finaux${NC}"
+    else
+        echo -e "${GREEN}Version Finale${NC}"
+    fi
+    echo -e "${BLUE}$version_header${NC}"
+    echo -e "${YELLOW}Tag créé avec le contenu du changelog${NC}\n"
 }
 
 # Function to show help
@@ -677,43 +1029,75 @@ show_help() {
     read -p "Press Enter to continue..."
 }
 
+# Function to get current version
+get_current_version() {
+    # Try to get the latest tag
+    local latest_tag=$(git describe --tags --abbrev=0 2>/dev/null)
+    if [ -z "$latest_tag" ]; then
+        echo "0.0.0"
+    else
+        # Remove 'v' prefix if present
+        echo "${latest_tag#v}"
+    fi
+}
+
 # Function to display menu
 show_menu() {
     clear
-    echo -e "${BOLD}🌊 FlowMaster CLI${NC}"
-    echo -e "${CYAN}═══════════════════════════════════${NC}"
-    echo -e "${YELLOW}Type 'h' for workflow help${NC}"
+    local current_version=$(get_current_version)
+    local current_branch=$(git branch --show-current 2>/dev/null || echo 'Not a git repository')
+    local changes_count=$(git status --porcelain 2>/dev/null | wc -l)
+    local latest_commit=$(git log -1 --pretty=format:'%h - %s' 2>/dev/null || echo 'No commits yet')
+    
+    # Header
     echo
-    echo -e "${BOLD}Select an action:${NC}"
+    echo -e "${BOLD}             🌊 FlowMaster CLI ${NC}"
+    echo -e "${CYAN}             Version ${current_version}${NC}"
     echo
-    echo -e "${CYAN}Feature Management${NC}"
-    echo -e "  ${BLUE}1)${NC} Start new feature"
-    echo -e "  ${BLUE}2)${NC} Finish feature"
+    echo -e "${CYAN}╭───────────────────────────────────────╮${NC}"
+    
+    # Status Bar
+    echo -e "${CYAN}│${NC} ${BOLD}Status${NC}                                 ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} Branch  : ${GREEN}$current_branch${NC}            ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} Changes : ${YELLOW}$changes_count file(s)${NC}               ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} Latest  : ${BLUE}$latest_commit${NC}     ${CYAN}│${NC}"
+    echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
+    
+    # Feature Management
+    echo -e "${CYAN}│${NC} ${BOLD}Feature Management${NC}                     ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[1]${NC} Start Feature                      ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[2]${NC} Finish Feature                     ${CYAN}│${NC}"
+    echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
+    
+    # Release Management
+    echo -e "${CYAN}│${NC} ${BOLD}Release Management${NC}                     ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[3]${NC} Start Release                      ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[4]${NC} Finish Release                     ${CYAN}│${NC}"
+    echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
+    
+    # Hotfix Management
+    echo -e "${CYAN}│${NC} ${BOLD}Hotfix Management${NC}                      ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[5]${NC} Start Hotfix                       ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[6]${NC} Finish Hotfix                      ${CYAN}│${NC}"
+    echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
+    
+    # Other Actions
+    echo -e "${CYAN}│${NC} ${BOLD}Other Actions${NC}                          ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[7]${NC} Create Commit                      ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[8]${NC} View Status                        ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[u]${NC} Check for Updates                  ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[h]${NC} Show Help                          ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${RED}[9]${NC} Exit                              ${CYAN}│${NC}"
+    echo -e "${CYAN}╰───────────────────────────────────────╯${NC}"
+    
+    # Footer
     echo
-    echo -e "${CYAN}Release Management${NC}"
-    echo -e "  ${BLUE}3)${NC} Start release"
-    echo -e "  ${BLUE}4)${NC} Finish release"
+    echo -e "       ${YELLOW}Type 'h' for workflow help${NC}"
     echo
-    echo -e "${CYAN}Hotfix Management${NC}"
-    echo -e "  ${BLUE}5)${NC} Start hotfix"
-    echo -e "  ${BLUE}6)${NC} Finish hotfix"
-    echo
-    echo -e "${CYAN}Other Actions${NC}"
-    echo -e "  ${BLUE}7)${NC} Create commit"
-    echo -e "  ${BLUE}8)${NC} View current status"
-    echo -e "  ${BLUE}h)${NC} Show workflow help"
-    echo -e "  ${RED}9)${NC} Exit"
-    echo
-    echo -e "${CYAN}Current Status${NC}"
-    echo -e "  Branch: $(git branch --show-current 2>/dev/null || echo 'Not a git repository')"
-    if git rev-parse --git-dir > /dev/null 2>&1; then
-        echo -e "  Changes: $(git status --porcelain | wc -l) file(s) modified"
-        echo -e "  Latest: $(git log -1 --pretty=format:'%h - %s' 2>/dev/null || echo 'No commits yet')"
-    fi
-    echo
-    echo -e "${CYAN}═══════════════════════════════════${NC}"
-    echo
-    read -p "Enter your choice [1-9,h]: " choice
+    
+    # Input
+    echo -e "${BOLD}Select an action${NC} ${BLUE}[1-9,h]${NC}: \c"
+    read choice
 }
 
 # Function to get feature name
@@ -772,20 +1156,33 @@ get_version() {
     echo
 }
 
-# Function to show current status
+# Function to show current status with modern display
 show_status() {
+    clear
     echo
-    echo -e "${BOLD}Current Git Status${NC}"
-    echo -e "${CYAN}═══════════════════════════════════${NC}"
+    echo -e "${BOLD}             Git Status Overview${NC}"
     echo
-    echo -e "${BOLD}Current branch:${NC}"
-    git branch --show-current
-    echo
-    echo -e "${BOLD}Recent commits:${NC}"
-    git log --oneline -n 5
-    echo
-    echo -e "${BOLD}Working tree status:${NC}"
-    git status -s
+    echo -e "${CYAN}╭───────────────────────────────────────╮${NC}"
+    
+    # Branch Info
+    echo -e "${CYAN}│${NC} ${BOLD}Current Branch${NC}                         ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} $(git branch --show-current)                    ${CYAN}│${NC}"
+    echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
+    
+    # Recent Commits
+    echo -e "${CYAN}│${NC} ${BOLD}Recent Commits${NC}                         ${CYAN}│${NC}"
+    git log --oneline -n 5 | while read -r line; do
+        echo -e "${CYAN}│${NC} ${BLUE}$line${NC}                     ${CYAN}│${NC}"
+    done
+    echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
+    
+    # Working Tree Status
+    echo -e "${CYAN}│${NC} ${BOLD}Working Tree Status${NC}                    ${CYAN}│${NC}"
+    git status -s | while read -r line; do
+        echo -e "${CYAN}│${NC} ${YELLOW}$line${NC}                            ${CYAN}│${NC}"
+    done
+    
+    echo -e "${CYAN}╰───────────────────────────────────────╯${NC}"
     echo
     read -p "Press Enter to continue..."
 }
@@ -827,6 +1224,11 @@ while true; do
             ;;
         8)
             show_status
+            ;;
+        u|U)
+            info "Vérification des mises à jour..."
+            sudo flowmaster upgrade
+            read -p "Press Enter to continue..."
             ;;
         h|H)
             show_help
