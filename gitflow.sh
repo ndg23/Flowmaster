@@ -721,6 +721,63 @@ finalize_changelog() {
     local changelog_file="CHANGELOG.md"
     local today=$(date +%Y-%m-%d)
     
+    # Check if tag already exists
+    if git rev-parse "v$version" >/dev/null 2>&1; then
+        error "Le tag v$version existe déjà." "no_exit"
+        echo -e "\n${YELLOW}Options disponibles :${NC}"
+        echo -e "1) Supprimer et recréer le tag"
+        echo -e "2) Incrémenter la version"
+        echo -e "3) Annuler l'opération"
+        read -p "Choisissez une option [1-3]: " choice
+        
+        case $choice in
+            1)
+                info "Suppression du tag existant..."
+                if ! git tag -d "v$version" >/dev/null 2>&1; then
+                    error "Impossible de supprimer le tag"
+                    return 1
+                fi
+                if ! git push origin ":refs/tags/v$version" >/dev/null 2>&1; then
+                    warning "Impossible de supprimer le tag distant"
+                fi
+                ;;
+            2)
+                # Incrémenter automatiquement la version
+                if [[ $version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-((alpha|beta|rc)\.([0-9]+)))?$ ]]; then
+                    local major="${BASH_REMATCH[1]}"
+                    local minor="${BASH_REMATCH[2]}"
+                    local patch="${BASH_REMATCH[3]}"
+                    local prerelease="${BASH_REMATCH[5]}"
+                    local prerelease_num="${BASH_REMATCH[6]}"
+                    
+                    if [ ! -z "$prerelease" ]; then
+                        # Incrémenter le numéro de pre-release
+                        prerelease_num=$((prerelease_num + 1))
+                        version="$major.$minor.$patch-$prerelease.$prerelease_num"
+                    else
+                        # Incrémenter le patch
+                        patch=$((patch + 1))
+                        version="$major.$minor.$patch"
+                    fi
+                    
+                    info "Nouvelle version : $version"
+                    read -p "Continuer avec cette version ? [Y/n] " response
+                    if [[ "$response" =~ ^[Nn]$ ]]; then
+                        error "Opération annulée"
+                        return 1
+                    fi
+                else
+                    error "Format de version invalide"
+                    return 1
+                fi
+                ;;
+            *)
+                error "Opération annulée"
+                return 1
+                ;;
+        esac
+    fi
+    
     # Replace [Unreleased] with new version
     local version_header="## [$version] - $today"
     
@@ -759,9 +816,12 @@ finalize_changelog() {
     git commit -m "chore: mise à jour du changelog pour la version $version"
     
     # Create annotated tag with changelog content
-    git tag -a "v$version" -m "Version $version
+    if ! git tag -a "v$version" -m "Version $version
 
-$tag_message"
+$tag_message"; then
+        error "Impossible de créer le tag v$version"
+        return 1
+    fi
     
     # Show the final version header with appropriate message
     echo -e "\n${GREEN}Version $version finalisée :${NC}"
