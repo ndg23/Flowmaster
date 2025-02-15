@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# At the beginning of the file, add version
+VERSION="1.1.2-alpha.2"
+
 # Colors for better readability
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -900,6 +903,7 @@ show_menu() {
     echo -e "${CYAN}│${NC} ${BOLD}Other Actions${NC}                          ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC} ${BLUE}[7]${NC} Create Commit                      ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC} ${BLUE}[8]${NC} View Status                        ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[u]${NC} Check for Updates                  ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC} ${BLUE}[h]${NC} Show Help                          ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC} ${RED}[9]${NC} Exit                              ${CYAN}│${NC}"
     echo -e "${CYAN}╰───────────────────────────────────────╯${NC}"
@@ -1038,6 +1042,11 @@ while true; do
             ;;
         8)
             show_status
+            ;;
+        u|U)
+            info "Vérification des mises à jour..."
+            sudo flowmaster upgrade
+            read -p "Press Enter to continue..."
             ;;
         h|H)
             show_help
