@@ -483,44 +483,6 @@ Examples:
 
 # Function to start a release
 start_release() {
-    # Check for uncommitted changes first
-    if ! git diff-index --quiet HEAD --; then
-        error "Des changements non commités ont été détectés." "no_exit"
-        echo -e "\n${CYAN}╭───────────────────────────────────────╮${NC}"
-        echo -e "${CYAN}│${NC} ${BOLD}Options disponibles${NC}                      ${CYAN}│${NC}"
-        echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
-        echo -e "${CYAN}│${NC} ${BLUE}[1]${NC} Commiter les changements            ${CYAN}│${NC}"
-        echo -e "${CYAN}│${NC} ${BLUE}[2]${NC} Stash les changements              ${CYAN}│${NC}"
-        echo -e "${CYAN}│${NC} ${BLUE}[3]${NC} Annuler l'opération                ${CYAN}│${NC}"
-        echo -e "${CYAN}╰───────────────────────────────────────╯${NC}"
-        
-        read -p "Choisissez une option [1-3]: " choice
-        
-        case $choice in
-            1)
-                create_commit
-                if [ $? -ne 0 ]; then
-                    error "Échec de la création du commit"
-                    return 1
-                fi
-                ;;
-            2)
-                info "Sauvegarde des changements..."
-                local stash_name="release_start_$(date +%s)"
-                if ! git stash push -m "$stash_name"; then
-                    error "Échec de la sauvegarde des changements"
-                    return 1
-                fi
-                info "Changements sauvegardés avec le nom: $stash_name"
-                local used_stash=true
-                ;;
-            *)
-                error "Opération annulée"
-                return 1
-                ;;
-        esac
-    fi
-    
     check_remote_connection || return 1
     
     # Get current version from latest tag
@@ -593,59 +555,39 @@ start_release() {
         echo -e "\n${BLUE}Choisissez une option ou entrez une version :${NC}"
         read -p "> " choice
         
-        # Process user choice
+        # Process user choice and get version
         case "$choice" in
-            "0")
-                echo -e "\nEntrez la version personnalisée (X.Y.Z[-prerelease.N]):"
-                read -p "> " version
-                ;;
-            [1-6])
-                version=$(get_version_from_choice "$choice" "$major" "$minor" "$patch" "$prerelease" "$prerelease_num")
+            [0-9]*)
+                if [ "$choice" = "0" ]; then
+                    echo -e "\nEntrez la version personnalisée (X.Y.Z[-prerelease.N]):"
+                    read -p "> " version
+                else
+                    version=$(get_version_from_choice "$choice" "$major" "$minor" "$patch" "$prerelease" "$prerelease_num")
+                fi
                 ;;
             *)
                 version="$choice"
                 ;;
         esac
+        
+        # Validate version format
+        validate_version "$version" "true" || return 1
+        
+        # Create release branch
+        local branch_name="release/v$version"
+        
+        info "Creating release branch: $branch_name"
+        if ! git checkout -b "$branch_name" develop; then
+            error "Failed to create release branch"
+            return 1
+        fi
+        
+        success "Successfully created release branch: $branch_name"
+        return 0
     else
         error "Version actuelle invalide: $current_version"
         return 1
     fi
-    
-    # Validate version format
-    validate_version "$version" "true" || return 1
-    
-    # Create release branch
-    local branch_name="release/v$version"
-    
-    info "Creating release branch: $branch_name"
-    if ! git checkout -b "$branch_name" develop; then
-        error "Failed to create release branch"
-        # Restore stashed changes if necessary
-        if [ "$used_stash" = true ]; then
-            info "Restauration des changements sauvegardés..."
-            if ! git stash pop "stash@{0}"; then
-                warning "Impossible de restaurer les changements automatiquement."
-                echo -e "${YELLOW}Vos changements sont toujours dans le stash avec le nom: $stash_name${NC}"
-                echo -e "Utilisez '${GREEN}git stash list${NC}' pour voir tous les stash"
-                echo -e "Utilisez '${GREEN}git stash pop${NC}' pour les restaurer manuellement"
-            fi
-        fi
-        return 1
-    fi
-    
-    # If we used stash, try to restore changes
-    if [ "$used_stash" = true ]; then
-        info "Restauration des changements sauvegardés..."
-        if ! git stash pop "stash@{0}"; then
-            warning "Impossible de restaurer les changements automatiquement."
-            echo -e "${YELLOW}Vos changements sont toujours dans le stash avec le nom: $stash_name${NC}"
-            echo -e "Utilisez '${GREEN}git stash list${NC}' pour voir tous les stash"
-            echo -e "Utilisez '${GREEN}git stash pop${NC}' pour les restaurer manuellement"
-            return 1
-        fi
-    fi
-    
-    success "Successfully created release branch: $branch_name"
 }
 
 # Helper function to get version from choice
@@ -1098,7 +1040,48 @@ get_current_version() {
     fi
 }
 
-# Function to display menu
+# Function to handle menu selection
+handle_menu_selection() {
+    case $1 in
+        1)  # Start Feature
+            get_feature_name
+            start_feature "$branch_name"
+            ;;
+        2)  # Finish Feature
+            finish_feature
+            ;;
+        3)  # Start Release
+            start_release
+            ;;
+        4)  # Finish Release
+            finish_release
+            ;;
+        5)  # Start Hotfix
+            get_version
+            start_hotfix "$version"
+            ;;
+        6)  # Finish Hotfix
+            finish_hotfix
+            ;;
+        7)  # Create Commit
+            create_commit
+            ;;
+        8)  # Show Status
+            show_status
+            ;;
+        9)  # Exit
+            echo
+            echo -e "${GREEN}Thank you for using GitFlow Manager!${NC}"
+            echo
+            exit 0
+            ;;
+        *)
+            error "Option invalide"
+            ;;
+    esac
+}
+
+# Function to show menu
 show_menu() {
     clear
     local current_version=$(get_current_version)
@@ -1155,6 +1138,28 @@ show_menu() {
     # Input
     echo -e "${BOLD}Select an action${NC} ${BLUE}[1-9,h]${NC}: \c"
     read choice
+    
+    # Remove the version prompt for release
+    if [ "$choice" = "3" ]; then
+        handle_menu_selection "$choice"
+        return
+    fi
+    
+    # Handle other menu options
+    case $choice in
+        1|2|4|5|6|7|8|9)
+            handle_menu_selection "$choice"
+            ;;
+        h|H)
+            show_help
+            ;;
+        u|U)
+            check_for_updates
+            ;;
+        *)
+            error "Option invalide"
+            ;;
+    esac
 }
 
 # Function to get feature name
@@ -1247,58 +1252,4 @@ show_status() {
 # Main menu loop
 while true; do
     show_menu
-    case $choice in
-        1)
-            get_feature_name
-            start_feature "$branch_name"
-            read -p "Press Enter to continue..."
-            ;;
-        2)
-            finish_feature
-            read -p "Press Enter to continue..."
-            ;;
-        3)
-            get_version
-            start_release "$version"
-            read -p "Press Enter to continue..."
-            ;;
-        4)
-            finish_release
-            read -p "Press Enter to continue..."
-            ;;
-        5)
-            get_version
-            start_hotfix "$version"
-            read -p "Press Enter to continue..."
-            ;;
-        6)
-            finish_hotfix
-            read -p "Press Enter to continue..."
-            ;;
-        7)
-            create_commit
-            read -p "Press Enter to continue..."
-            ;;
-        8)
-            show_status
-            ;;
-        u|U)
-            info "Vérification des mises à jour..."
-            sudo flowmaster upgrade
-            read -p "Press Enter to continue..."
-            ;;
-        h|H)
-            show_help
-            ;;
-        9)
-            echo
-            echo -e "${GREEN}Thank you for using GitFlow Manager!${NC}"
-            echo
-            exit 0
-            ;;
-        *)
-            echo -e "${RED}Invalid option. Please try again.${NC}"
-            read -p "Press Enter to continue..."
-            ;;
-    esac
 done 
