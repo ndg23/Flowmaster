@@ -484,42 +484,118 @@ Examples:
 # Function to start a release
 start_release() {
     ensure_clean_work_tree || return 1
-    check_repository_config || return 1
     check_remote_connection || return 1
-    ensure_develop_branch || return 1
     
-    local version=$1
-    validate_version "$version" "true"
+    echo
+    echo -e "${BOLD}Démarrage d'une nouvelle Release${NC}"
+    echo -e "${CYAN}═══════════════════════════════════${NC}"
+    echo
     
-    local branch_name="release/v$version"
+    # Get current version from latest tag
+    local current_version=$(get_current_version)
+    local versions=($(git tag -l | grep '^v' | sed 's/^v//' | sort -t. -k1,1n -k2,2n -k3,3n))
     
-    info "Starting release: $version"
+    echo -e "${YELLOW}Tags existants :${NC}"
+    for v in "${versions[@]}"; do
+        echo -e "  ${GREEN}$v${NC}"
+    done
+    echo
     
-    # Try to pull with more detailed error handling
-    if ! git pull origin develop; then
-        error "Failed to pull from develop branch. Please check your:"
-        echo -e "1. Internet connection"
-        echo -e "2. Remote repository configuration"
-        echo -e "3. Branch permissions"
-        echo -e "\nRemote configuration:"
-        git remote -v
+    # Parse current version
+    if [[ $current_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-((alpha|beta|rc)\.([0-9]+)))?$ ]]; then
+        local major="${BASH_REMATCH[1]}"
+        local minor="${BASH_REMATCH[2]}"
+        local patch="${BASH_REMATCH[3]}"
+        local prerelease="${BASH_REMATCH[5]}"
+        local prerelease_num="${BASH_REMATCH[6]}"
+        
+        echo -e "${BLUE}Suggestions pour la prochaine version :${NC}"
+        
+        # Suggest next versions based on current state
+        if [ -z "$prerelease" ]; then
+            # For release versions
+            echo -e "1) ${GREEN}$major.$minor.$((patch+1))${NC} (patch - corrections de bugs)"
+            echo -e "2) ${GREEN}$major.$((minor+1)).0${NC} (minor - nouvelles fonctionnalités)"
+            echo -e "3) ${GREEN}$((major+1)).0.0${NC} (major - changements majeurs)"
+            echo -e "4) ${GREEN}$major.$minor.$patch-alpha.1${NC} (nouvelle alpha)"
+            echo -e "5) ${YELLOW}Version personnalisée${NC}"
+        else
+            # For pre-release versions
+            case "$prerelease" in
+                "alpha")
+                    echo -e "1) ${GREEN}$major.$minor.$patch-alpha.$((prerelease_num+1))${NC} (prochaine alpha)"
+                    echo -e "2) ${GREEN}$major.$minor.$patch-beta.1${NC} (début beta)"
+                    echo -e "3) ${GREEN}$major.$minor.$patch${NC} (version finale)"
+                    ;;
+                "beta")
+                    echo -e "1) ${GREEN}$major.$minor.$patch-beta.$((prerelease_num+1))${NC} (prochaine beta)"
+                    echo -e "2) ${GREEN}$major.$minor.$patch-rc.1${NC} (début rc)"
+                    echo -e "3) ${GREEN}$major.$minor.$patch${NC} (version finale)"
+                    ;;
+                "rc")
+                    echo -e "1) ${GREEN}$major.$minor.$patch-rc.$((prerelease_num+1))${NC} (prochaine rc)"
+                    echo -e "2) ${GREEN}$major.$minor.$patch${NC} (version finale)"
+                    ;;
+            esac
+            echo -e "4) ${YELLOW}Version personnalisée${NC}"
+        fi
+        
+        echo
+        echo -e "${BLUE}Choisissez une option ou entrez une version personnalisée :${NC}"
+        read -p "> " choice
+        
+        # Process user choice
+        case "$choice" in
+            1|2|3|4)
+                if [ -z "$prerelease" ]; then
+                    case "$choice" in
+                        1) version="$major.$minor.$((patch+1))";;
+                        2) version="$major.$((minor+1)).0";;
+                        3) version="$((major+1)).0.0";;
+                        4) version="$major.$minor.$patch-alpha.1";;
+                    esac
+                else
+                    case "$prerelease" in
+                        "alpha")
+                            case "$choice" in
+                                1) version="$major.$minor.$patch-alpha.$((prerelease_num+1))";;
+                                2) version="$major.$minor.$patch-beta.1";;
+                                3) version="$major.$minor.$patch";;
+                            esac
+                            ;;
+                        "beta")
+                            case "$choice" in
+                                1) version="$major.$minor.$patch-beta.$((prerelease_num+1))";;
+                                2) version="$major.$minor.$patch-rc.1";;
+                                3) version="$major.$minor.$patch";;
+                            esac
+                            ;;
+                        "rc")
+                            case "$choice" in
+                                1) version="$major.$minor.$patch-rc.$((prerelease_num+1))";;
+                                2) version="$major.$minor.$patch";;
+                            esac
+                            ;;
+                    esac
+                fi
+                ;;
+            *)
+                version="$choice"
+                ;;
+        esac
+    else
+        error "Version actuelle invalide: $current_version"
         return 1
     fi
     
-    git checkout -b "$branch_name" || error "Failed to create release branch"
+    # Validate version format
+    validate_version "$version" "true" || return 1
     
-    # Update version in package.json without git tag
-    if [[ $version =~ -(.+)$ ]]; then
-        # For pre-release versions, use the full version string
-        npm version "$version" --no-git-tag-version || error "Failed to update version in package.json"
-    else
-        # For stable versions, just update the version
-        npm version "$version" --no-git-tag-version || error "Failed to update version in package.json"
-    fi
+    # Create release branch
+    local branch_name="release/v$version"
     
-    git add package.json package-lock.json
-    git commit -m "chore: bump version to $version"
-    git push origin "$branch_name"
+    info "Creating release branch: $branch_name"
+    git checkout -b "$branch_name" develop || error "Failed to create release branch"
     
     success "Successfully created release branch: $branch_name"
 }
