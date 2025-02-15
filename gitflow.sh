@@ -909,17 +909,21 @@ finalize_changelog() {
     # Check if tag already exists
     if git rev-parse "v$version" >/dev/null 2>&1; then
         error "Le tag v$version existe déjà." "no_exit"
-        echo -e "\n${YELLOW}Options disponibles :${NC}"
-        echo -e "1) Supprimer et recréer le tag"
-        echo -e "2) Incrémenter la version"
-        echo -e "3) Annuler l'opération"
+        echo -e "\n${CYAN}╭───────────────────────────────────────╮${NC}"
+        echo -e "${CYAN}│${NC} ${BOLD}Options disponibles${NC}                      ${CYAN}│${NC}"
+        echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
+        echo -e "${CYAN}│${NC} ${BLUE}[1]${NC} Supprimer et recréer le tag         ${CYAN}│${NC}"
+        echo -e "${CYAN}│${NC} ${BLUE}[2]${NC} Incrémenter automatiquement         ${CYAN}│${NC}"
+        echo -e "${CYAN}│${NC} ${BLUE}[3]${NC} Annuler l'opération                 ${CYAN}│${NC}"
+        echo -e "${CYAN}╰───────────────────────────────────────╯${NC}"
+        
         read -p "Choisissez une option [1-3]: " choice
         
         case $choice in
             1)
                 info "Suppression du tag existant..."
                 if ! git tag -d "v$version" >/dev/null 2>&1; then
-                    error "Impossible de supprimer le tag"
+                    error "Impossible de supprimer le tag local"
                     return 1
                 fi
                 if ! git push origin ":refs/tags/v$version" >/dev/null 2>&1; then
@@ -963,36 +967,23 @@ finalize_changelog() {
         esac
     fi
     
-    # Replace [Unreleased] with new version
-    local version_header="## [$version] - $today"
+    # Update CHANGELOG.md
+    info "Mise à jour du CHANGELOG.md..."
     
-    # Add pre-release indicator if applicable
-    if [[ $version =~ -alpha ]]; then
-        version_header="$version_header (Alpha)"
-    elif [[ $version =~ -beta ]]; then
-        version_header="$version_header (Beta)"
-    elif [[ $version =~ -rc ]]; then
-        version_header="$version_header (Release Candidate)"
+    # Add new version header if it doesn't exist
+    if ! grep -q "## \[$version\]" "$changelog_file"; then
+        # Create temporary file
+        local temp_file=$(mktemp)
+        
+        # Add new version section after the first line
+        awk -v version="$version" -v date="$today" '
+        NR==1 {print; print "\n## [" version "] - " date; print "### Ajouté\n### Modifié\n### Corrigé\n### Supprimé\n"}
+        NR!=1 {print}
+        ' "$changelog_file" > "$temp_file"
+        
+        # Replace original file
+        mv "$temp_file" "$changelog_file"
     fi
-    
-    # Insert new version after the header, keeping Unreleased at top
-    sed -i.bak "/# Journal des modifications/a\\
-\\
-## [Unreleased]\\
-### Ajouté\\
-### Modifié\\
-### Corrigé\\
-### Supprimé\\
-" "$changelog_file"
-    rm -f "$changelog_file.bak"
-    
-    # Replace old Unreleased with new version
-    sed -i.bak "s/## \[Unreleased\].*$/## [$version] - $today/" "$changelog_file"
-    rm -f "$changelog_file.bak"
-    
-    # Remove empty sections in the current release
-    sed -i.bak "/$version_header/,/^## /{/^### .*/{N;/\n$/d}}" "$changelog_file"
-    rm -f "$changelog_file.bak"
     
     # Create git tag with changelog content
     local tag_message=$(awk "/^## \[$version\]/,/^## /{print}" "$changelog_file" | sed '/^## \[/d;/^## /q' | sed '/^$/d')
@@ -1019,8 +1010,10 @@ $tag_message"; then
     else
         echo -e "${GREEN}Version Finale${NC}"
     fi
-    echo -e "${BLUE}$version_header${NC}"
+    echo -e "${BLUE}## [$version] - $today${NC}"
     echo -e "${YELLOW}Tag créé avec le contenu du changelog${NC}\n"
+    
+    return 0
 }
 
 # Function to show help
