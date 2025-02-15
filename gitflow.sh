@@ -622,54 +622,21 @@ finalize_changelog() {
     local changelog_file="CHANGELOG.md"
     local today=$(date +%Y-%m-%d)
     
-    # Get GAFAM compatibility info
-    echo -e "\n${YELLOW}Enter compatibility information:${NC}"
-    echo -e "${BLUE}Format examples:${NC}"
-    echo -e "  Google Chrome 120+"
-    echo -e "  Safari 17+"
-    echo -e "  Firefox 122+"
-    echo -e "  Edge 120+"
-    echo -e "  Opera 105+"
-    
-    # Get browser compatibility
-    browsers=()
-    for browser in "Google Chrome" "Safari" "Firefox" "Edge" "Opera"; do
-        while true; do
-            echo -e "\n${YELLOW}Enter minimum $browser version (e.g., 120+) or press enter to skip:${NC}"
-            read -r version_info
-            if [[ -z "$version_info" ]]; then
-                break
-            elif [[ $version_info =~ ^[0-9]+\+$ ]]; then
-                browsers+=("$browser $version_info")
-                break
-            else
-                echo -e "${RED}Invalid version format. Please use format: NUMBER+ (e.g., 120+)${NC}"
-            fi
-        done
-    done
-    
-    # Construct browser compatibility string
-    compatibility=""
-    if [ ${#browsers[@]} -gt 0 ]; then
-        compatibility=" | Compatible avec : ${browsers[0]}"
-        for ((i=1; i<${#browsers[@]}; i++)); do
-            compatibility="$compatibility, ${browsers[$i]}"
-        done
-    fi
-    
-    # Replace [Unreleased] with new version including compatibility info
-    local version_header="## [$version] - $today$compatibility"
+    # Replace [Unreleased] with new version
+    local version_header="## [$version] - $today"
     sed -i.bak "s/## \[Unreleased\]/$version_header/" "$changelog_file"
     rm -f "$changelog_file.bak"
     
-    # Add new Unreleased section
+    # Add new Unreleased section with emojis
     sed -i.bak "1a\\
 \\
 ## [Unreleased]\\
-### Ajouté\\
-### Modifié\\
-### Corrigé\\
-### Supprimé\\
+### ✨ Features\\
+### 🐛 Bug Fixes\\
+### 📚 Documentation\\
+### ♻️ Refactoring\\
+### ⚡️ Performance\\
+### 🔧 Chores\\
 " "$changelog_file"
     rm -f "$changelog_file.bak"
     
@@ -677,12 +644,21 @@ finalize_changelog() {
     sed -i.bak "/$version_header/,/^## /{/^### .*/{N;/\n$/d}}" "$changelog_file"
     rm -f "$changelog_file.bak"
     
+    # Create git tag with changelog content
+    local tag_message=$(awk "/^## \[$version\]/,/^## /{print}" "$changelog_file" | sed '/^## \[/d;/^## /q' | sed '/^$/d')
+    
     git add "$changelog_file"
     git commit -m "chore: mise à jour du changelog pour la version $version"
     
+    # Create annotated tag with changelog content
+    git tag -a "v$version" -m "Version $version
+
+$tag_message"
+    
     # Show the final version header
-    echo -e "\n${GREEN}Version header created:${NC}"
-    echo -e "${BLUE}$version_header${NC}\n"
+    echo -e "\n${GREEN}Version $version finalisée :${NC}"
+    echo -e "${BLUE}$version_header${NC}"
+    echo -e "${YELLOW}Tag créé avec le contenu du changelog${NC}\n"
 }
 
 # Function to show help
