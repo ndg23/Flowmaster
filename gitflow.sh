@@ -320,6 +320,10 @@ finish_feature() {
     
     info "Finishing feature branch: $current_branch"
     
+    # Variable to track if we used stash
+    local used_stash=false
+    local stash_name=""
+    
     # Check for uncommitted changes
     if ! git diff-index --quiet HEAD --; then
         error "Des changements non commités ont été détectés." "no_exit"
@@ -341,11 +345,12 @@ finish_feature() {
             2)
                 # Stash changes
                 info "Sauvegarde des changements..."
-                local stash_name="feature_finish_$(date +%s)"
+                stash_name="feature_finish_$(date +%s)"
                 if ! git stash push -m "$stash_name"; then
                     error "Échec de la sauvegarde des changements"
                     return 1
                 fi
+                used_stash=true
                 info "Changements sauvegardés avec le nom: $stash_name"
                 ;;
             *)
@@ -354,6 +359,24 @@ finish_feature() {
                 ;;
         esac
     fi
+    
+    # Function to restore stash if needed
+    restore_stash() {
+        if [ "$used_stash" = true ]; then
+            info "Restauration des changements sauvegardés..."
+            local stash_index=$(git stash list | grep "$stash_name" | cut -d: -f1)
+            if [ ! -z "$stash_index" ]; then
+                if ! git stash apply "$stash_index"; then
+                    warning "Impossible de restaurer les changements stashés automatiquement."
+                    echo -e "${YELLOW}Vos changements sont toujours dans le stash avec le nom: $stash_name${NC}"
+                    echo -e "Utilisez '${GREEN}git stash list${NC}' pour voir tous les stash"
+                    echo -e "Utilisez '${GREEN}git stash apply${NC}' pour les restaurer manuellement"
+                else
+                    git stash drop "$stash_index"
+                fi
+            fi
+        fi
+    }
     
     # Check if branch exists on remote
     local has_remote=false
@@ -364,16 +387,12 @@ finish_feature() {
     # Update develop branch
     info "Mise à jour de la branche develop..."
     if ! safe_git_command "git checkout develop" "develop"; then
-        if ! safe_git_command "git stash pop" "stash"; then
-            warning "Impossible de restaurer les changements stashés. Utilisez 'git stash list' pour les retrouver."
-        fi
+        restore_stash
         return 1
     fi
     
     if ! safe_git_command "git pull origin develop" "develop"; then
-        if ! safe_git_command "git stash pop" "stash"; then
-            warning "Impossible de restaurer les changements stashés. Utilisez 'git stash list' pour les retrouver."
-        fi
+        restore_stash
         return 1
     fi
     
@@ -391,13 +410,12 @@ finish_feature() {
                 info "Résolvez les conflits puis utilisez:"
                 echo -e "git add <fichiers>"
                 echo -e "git commit -m 'resolve conflicts'"
+                restore_stash
                 return 1
                 ;;
             *)
                 git merge --abort
-                if ! safe_git_command "git stash pop" "stash"; then
-                    warning "Impossible de restaurer les changements stashés. Utilisez 'git stash list' pour les retrouver."
-                fi
+                restore_stash
                 error "Fusion annulée"
                 return 1
                 ;;
@@ -407,6 +425,7 @@ finish_feature() {
     # Push changes
     info "Push des changements..."
     if ! safe_git_command "git push origin develop" "develop"; then
+        restore_stash
         return 1
     fi
     
@@ -426,13 +445,8 @@ finish_feature() {
     
     success "Feature terminée avec succès: $current_branch"
     
-    # Restore stashed changes if necessary
-    if [ "$choice" = "2" ]; then
-        info "Restauration des changements sauvegardés..."
-        if ! safe_git_command "git stash pop" "stash"; then
-            warning "Impossible de restaurer les changements stashés. Utilisez 'git stash list' pour les retrouver."
-        fi
-    fi
+    # Restore stashed changes at the end if everything went well
+    restore_stash
 }
 
 # Function to validate version format
