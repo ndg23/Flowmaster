@@ -31,11 +31,32 @@ info() {
 
 # Function to get latest version
 get_latest_version() {
-    git ls-remote --tags --refs "$REPO_URL" | \
-    awk -F'/' '{print $3}' | \
-    sed 's/^v//' | \
-    sort -t. -k1,1n -k2,2n -k3,3n | \
-    tail -n1
+    # Get the latest commit from main branch
+    local main_commit=$(git ls-remote "$REPO_URL" main | cut -f1)
+    
+    if [ -n "$main_commit" ]; then
+        # Clone the main branch directly
+        rm -rf "$TEMP_DIR" 2>/dev/null
+        mkdir -p "$TEMP_DIR"
+        
+        info "Clonage de la dernière version depuis main..."
+        if ! git clone --depth 1 --branch main "$REPO_URL" "$TEMP_DIR" 2>/dev/null; then
+            error "Impossible de cloner la branche main"
+            return 1
+        fi
+        
+        # Get version from VERSION file or gitflow.sh
+        if [ -f "$TEMP_DIR/VERSION" ]; then
+            cat "$TEMP_DIR/VERSION"
+        elif [ -f "$TEMP_DIR/gitflow.sh" ]; then
+            grep "VERSION=" "$TEMP_DIR/gitflow.sh" | cut -d'"' -f2 || echo "1.0.0"
+        else
+            echo "1.0.0"
+        fi
+    else
+        error "Impossible d'accéder à la branche main"
+        return 1
+    fi
 }
 
 # Function to get current version
@@ -161,25 +182,34 @@ install_or_upgrade() {
     local force=$1
     local current_version=$(get_current_version)
     
-    if [ "$force" = "force" ]; then
-        local latest_version=$(suggest_next_version "$current_version")
+    info "Installation depuis la branche main..."
+    
+    # Remove old version if it exists
+    if [ -f "$INSTALL_DIR/$SCRIPT_NAME" ]; then
+        info "Suppression de l'ancienne version..."
+        rm -f "$INSTALL_DIR/$SCRIPT_NAME" || error "Impossible de supprimer l'ancienne version"
+    fi
+    
+    # Remove old aliases
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        if [ -f "$HOME/.zshrc" ]; then
+            sed -i '' '/alias fm=.*/d' "$HOME/.zshrc"
+        fi
+        if [ -f "$HOME/.bash_profile" ]; then
+            sed -i '' '/alias fm=.*/d' "$HOME/.bash_profile"
+        fi
     else
-        local latest_version=$(get_latest_version)
-        if [ "$current_version" = "$latest_version" ]; then
-            info "Vous avez déjà la dernière version (v$current_version)"
-            return 0
+        if [ -f "/etc/profile.d/flowmaster.sh" ]; then
+            rm -f "/etc/profile.d/flowmaster.sh"
         fi
     fi
     
-    info "Installation de la version v$latest_version..."
-    
-    # Create and clean temporary directory
+    # Clone the main branch
+    info "Téléchargement de la dernière version..."
     rm -rf "$TEMP_DIR" 2>/dev/null
     mkdir -p "$TEMP_DIR" || error "Failed to create temporary directory"
     
-    # Clone the latest version
-    info "Téléchargement de la dernière version..."
-    if ! git clone --depth 1 --branch "v$latest_version" "$REPO_URL" "$TEMP_DIR" 2>/dev/null; then
+    if ! git clone --depth 1 --branch main "$REPO_URL" "$TEMP_DIR" 2>/dev/null; then
         error "Failed to download latest version"
     fi
     
@@ -190,15 +220,42 @@ install_or_upgrade() {
     chmod +x "$INSTALL_DIR/$SCRIPT_NAME" || \
         error "Failed to set executable permissions"
     
-    # Set up aliases
+    # Set up aliases based on OS
     info "Configuration des alias..."
-    echo "alias fm='flowmaster'" | sudo tee /etc/profile.d/flowmaster.sh >/dev/null
-    chmod +x /etc/profile.d/flowmaster.sh
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS - Add to .zshrc if it exists, otherwise .bash_profile
+        if [ -f "$HOME/.zshrc" ]; then
+            echo "alias fm='flowmaster'" >> "$HOME/.zshrc"
+            info "Alias ajouté à ~/.zshrc"
+        else
+            echo "alias fm='flowmaster'" >> "$HOME/.bash_profile"
+            info "Alias ajouté à ~/.bash_profile"
+        fi
+    else
+        # Linux - Use /etc/profile.d/
+        mkdir -p /etc/profile.d
+        echo "alias fm='flowmaster'" | sudo tee /etc/profile.d/flowmaster.sh >/dev/null
+        chmod +x /etc/profile.d/flowmaster.sh
+    fi
     
     # Clean up
     rm -rf "$TEMP_DIR"
     
     success "FlowMaster v$latest_version a été installé avec succès! 🎉"
+    
+    # Show appropriate reload command based on OS
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        if [ -f "$HOME/.zshrc" ]; then
+            echo -e "\n${YELLOW}Pour activer l'alias, exécutez :${NC}"
+            echo -e "${GREEN}source ~/.zshrc${NC}"
+        else
+            echo -e "\n${YELLOW}Pour activer l'alias, exécutez :${NC}"
+            echo -e "${GREEN}source ~/.bash_profile${NC}"
+        fi
+    else
+        echo -e "\n${YELLOW}Pour activer l'alias, exécutez :${NC}"
+        echo -e "${GREEN}source /etc/profile.d/flowmaster.sh${NC}"
+    fi
 }
 
 # Check if running with sudo/root permissions
