@@ -31,11 +31,38 @@ info() {
 
 # Function to get latest version
 get_latest_version() {
-    git ls-remote --tags --refs "$REPO_URL" | \
-    awk -F'/' '{print $3}' | \
-    sed 's/^v//' | \
-    sort -t. -k1,1n -k2,2n -k3,3n | \
-    tail -n1
+    # Get all branches and sort by commit date
+    local latest_branch=$(git ls-remote --heads "$REPO_URL" | \
+                         awk -F'/' '{print $3}' | \
+                         grep -E '^(develop|main|master)$' | \
+                         while read branch; do
+                             echo "$(git ls-remote -h "$REPO_URL" "$branch" | cut -f1) $branch"
+                         done | \
+                         sort -r | \
+                         head -n1 | \
+                         cut -d' ' -f2)
+    
+    # Get version from the most recent branch
+    if [ -n "$latest_branch" ]; then
+        # Try to get version from package.json or similar file
+        local version=$(git ls-remote --refs "$REPO_URL" "$latest_branch" | \
+                       git archive --remote="$REPO_URL" "$latest_branch" VERSION 2>/dev/null | \
+                       tar -xO 2>/dev/null || echo "")
+        
+        if [ -z "$version" ]; then
+            # If no version file, use latest tag on that branch
+            version=$(git ls-remote --tags --refs "$REPO_URL" | \
+                     awk -F'/' '{print $3}' | \
+                     sed 's/^v//' | \
+                     sort -t. -k1,1n -k2,2n -k3,3n | \
+                     tail -n1)
+        fi
+        
+        echo "$version"
+    else
+        error "Impossible de déterminer la dernière version"
+        return 1
+    fi
 }
 
 # Function to get current version
