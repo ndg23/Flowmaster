@@ -31,36 +31,30 @@ info() {
 
 # Function to get latest version
 get_latest_version() {
-    # Get all branches and sort by commit date
-    local latest_branch=$(git ls-remote --heads "$REPO_URL" | \
-                         awk -F'/' '{print $3}' | \
-                         grep -E '^(develop|main|master)$' | \
-                         while read branch; do
-                             echo "$(git ls-remote -h "$REPO_URL" "$branch" | cut -f1) $branch"
-                         done | \
-                         sort -r | \
-                         head -n1 | \
-                         cut -d' ' -f2)
+    # Get the latest commit from main branch
+    local main_commit=$(git ls-remote "$REPO_URL" main | cut -f1)
     
-    # Get version from the most recent branch
-    if [ -n "$latest_branch" ]; then
-        # Try to get version from package.json or similar file
-        local version=$(git ls-remote --refs "$REPO_URL" "$latest_branch" | \
-                       git archive --remote="$REPO_URL" "$latest_branch" VERSION 2>/dev/null | \
-                       tar -xO 2>/dev/null || echo "")
+    if [ -n "$main_commit" ]; then
+        # Clone the main branch directly
+        rm -rf "$TEMP_DIR" 2>/dev/null
+        mkdir -p "$TEMP_DIR"
         
-        if [ -z "$version" ]; then
-            # If no version file, use latest tag on that branch
-            version=$(git ls-remote --tags --refs "$REPO_URL" | \
-                     awk -F'/' '{print $3}' | \
-                     sed 's/^v//' | \
-                     sort -t. -k1,1n -k2,2n -k3,3n | \
-                     tail -n1)
+        info "Clonage de la dernière version depuis main..."
+        if ! git clone --depth 1 --branch main "$REPO_URL" "$TEMP_DIR" 2>/dev/null; then
+            error "Impossible de cloner la branche main"
+            return 1
         fi
         
-        echo "$version"
+        # Get version from VERSION file or gitflow.sh
+        if [ -f "$TEMP_DIR/VERSION" ]; then
+            cat "$TEMP_DIR/VERSION"
+        elif [ -f "$TEMP_DIR/gitflow.sh" ]; then
+            grep "VERSION=" "$TEMP_DIR/gitflow.sh" | cut -d'"' -f2 || echo "1.0.0"
+        else
+            echo "1.0.0"
+        fi
     else
-        error "Impossible de déterminer la dernière version"
+        error "Impossible d'accéder à la branche main"
         return 1
     fi
 }
@@ -188,17 +182,7 @@ install_or_upgrade() {
     local force=$1
     local current_version=$(get_current_version)
     
-    if [ "$force" = "force" ]; then
-        local latest_version=$(suggest_next_version "$current_version")
-    else
-        local latest_version=$(get_latest_version)
-        if [ "$current_version" = "$latest_version" ]; then
-            info "Vous avez déjà la dernière version (v$current_version)"
-            return 0
-        fi
-    fi
-    
-    info "Installation de la version v$latest_version..."
+    info "Installation depuis la branche main..."
     
     # Remove old version if it exists
     if [ -f "$INSTALL_DIR/$SCRIPT_NAME" ]; then
@@ -220,13 +204,12 @@ install_or_upgrade() {
         fi
     fi
     
-    # Create and clean temporary directory
+    # Clone the main branch
+    info "Téléchargement de la dernière version..."
     rm -rf "$TEMP_DIR" 2>/dev/null
     mkdir -p "$TEMP_DIR" || error "Failed to create temporary directory"
     
-    # Clone the latest version
-    info "Téléchargement de la dernière version..."
-    if ! git clone --depth 1 --branch "v$latest_version" "$REPO_URL" "$TEMP_DIR" 2>/dev/null; then
+    if ! git clone --depth 1 --branch main "$REPO_URL" "$TEMP_DIR" 2>/dev/null; then
         error "Failed to download latest version"
     fi
     
