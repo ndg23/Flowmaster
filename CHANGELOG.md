@@ -1,8 +1,8 @@
 # Journal des modifications
 
-## [1.0.0] - 2025-02-15
+## [1.1.0] - 2025-02-18
 ### Ajouté
--  -  -  -  done-  ### Modifié
+### Modifié
 ### Corrigé
 ### Supprimé
 
