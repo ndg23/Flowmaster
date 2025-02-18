@@ -190,15 +190,42 @@ install_or_upgrade() {
     chmod +x "$INSTALL_DIR/$SCRIPT_NAME" || \
         error "Failed to set executable permissions"
     
-    # Set up aliases
+    # Set up aliases based on OS
     info "Configuration des alias..."
-    echo "alias fm='flowmaster'" | sudo tee /etc/profile.d/flowmaster.sh >/dev/null
-    chmod +x /etc/profile.d/flowmaster.sh
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS - Add to .zshrc if it exists, otherwise .bash_profile
+        if [ -f "$HOME/.zshrc" ]; then
+            echo "alias fm='flowmaster'" >> "$HOME/.zshrc"
+            info "Alias ajouté à ~/.zshrc"
+        else
+            echo "alias fm='flowmaster'" >> "$HOME/.bash_profile"
+            info "Alias ajouté à ~/.bash_profile"
+        fi
+    else
+        # Linux - Use /etc/profile.d/
+        mkdir -p /etc/profile.d
+        echo "alias fm='flowmaster'" | sudo tee /etc/profile.d/flowmaster.sh >/dev/null
+        chmod +x /etc/profile.d/flowmaster.sh
+    fi
     
     # Clean up
     rm -rf "$TEMP_DIR"
     
     success "FlowMaster v$latest_version a été installé avec succès! 🎉"
+    
+    # Show appropriate reload command based on OS
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        if [ -f "$HOME/.zshrc" ]; then
+            echo -e "\n${YELLOW}Pour activer l'alias, exécutez :${NC}"
+            echo -e "${GREEN}source ~/.zshrc${NC}"
+        else
+            echo -e "\n${YELLOW}Pour activer l'alias, exécutez :${NC}"
+            echo -e "${GREEN}source ~/.bash_profile${NC}"
+        fi
+    else
+        echo -e "\n${YELLOW}Pour activer l'alias, exécutez :${NC}"
+        echo -e "${GREEN}source /etc/profile.d/flowmaster.sh${NC}"
+    fi
 }
 
 # Check if running with sudo/root permissions
