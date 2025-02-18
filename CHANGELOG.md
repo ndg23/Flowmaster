@@ -1,5 +1,11 @@
 # Journal des modifications
 
+## [1.1.0] - 2025-02-18
+### Ajouté
+### Modifié
+### Corrigé
+### Supprimé
+
 ## [1.1.2-alpha.2] - 2025-02-15
 ### Ajouté
 -  auto tags-  -  upgrade-  auto upgrade### Modifié
