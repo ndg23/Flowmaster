@@ -200,6 +200,26 @@ install_or_upgrade() {
     
     info "Installation de la version v$latest_version..."
     
+    # Remove old version if it exists
+    if [ -f "$INSTALL_DIR/$SCRIPT_NAME" ]; then
+        info "Suppression de l'ancienne version..."
+        rm -f "$INSTALL_DIR/$SCRIPT_NAME" || error "Impossible de supprimer l'ancienne version"
+    fi
+    
+    # Remove old aliases
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        if [ -f "$HOME/.zshrc" ]; then
+            sed -i '' '/alias fm=.*/d' "$HOME/.zshrc"
+        fi
+        if [ -f "$HOME/.bash_profile" ]; then
+            sed -i '' '/alias fm=.*/d' "$HOME/.bash_profile"
+        fi
+    else
+        if [ -f "/etc/profile.d/flowmaster.sh" ]; then
+            rm -f "/etc/profile.d/flowmaster.sh"
+        fi
+    fi
+    
     # Create and clean temporary directory
     rm -rf "$TEMP_DIR" 2>/dev/null
     mkdir -p "$TEMP_DIR" || error "Failed to create temporary directory"
