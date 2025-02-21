@@ -2,25 +2,10 @@
   "name": "flowmaster-cli",
   "version": "1.1.2",
   "description": "A modern GitFlow CLI tool",
-<<<<<<< HEAD
-  "main": "lib/index.js",
-=======
->>>>>>> 1e823b67
   "bin": {
     "flowmaster": "./bin/flowmaster.js",
     "fm": "./bin/flowmaster.js"
   },
-<<<<<<< HEAD
-  "scripts": {
-    "test": "jest",
-    "lint": "eslint .",
-    "start": "node ./bin/flowmaster.js",
-    "postinstall": "node ./scripts/postinstall.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ndg23/Flowmaster.git"
-=======
   "files": [
     "bin/",
     "lib/"
@@ -29,7 +14,6 @@
     "postinstall": "chmod +x ./lib/gitflow.sh",
     "build": "mkdir -p lib && cp gitflow.sh lib/",
     "publish-npm": "node scripts/publish-npm.js"
->>>>>>> 1e823b67
   },
   "keywords": [
     "git",
@@ -41,23 +25,6 @@
   "license": "MIT",
   "dependencies": {
     "chalk": "^4.1.2",
-<<<<<<< HEAD
-    "commander": "^8.3.0",
-    "inquirer": "^8.2.0",
-    "simple-git": "^3.16.0",
-    "ora": "^5.4.1",
-    "semver": "^7.5.4"
-  },
-  "devDependencies": {
-    "eslint": "^8.0.0",
-    "jest": "^27.3.1"
-  },
-  "publishConfig": {
-    "access": "public"
-  }
-} 
-=======
     "commander": "^8.3.0"
   }
 }
->>>>>>> 1e823b67
