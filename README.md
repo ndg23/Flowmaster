@@ -24,3 +24,23 @@ A powerful and intuitive command-line tool for managing Git workflows with GitFl
 ## 🚀 Quick Start
 
 1. Install FlowMaster:
+
+```bash
+npm install -g flowmaster-cli
+```
+
+2. Initialize a new project:
+
+```bash
+flowmaster init
+```
+
+3. Start the interactive menu:
+
+```bash
+flowmaster
+```
+
+## 📚 Documentation
+
+For more detailed information on how to use FlowMaster, please refer to the [documentation](https://flowmaster-cli.readthedocs.io).
