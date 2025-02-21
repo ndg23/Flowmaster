@@ -2,18 +2,13 @@
 
 ## [1.1.0] - 2025-02-18
 ### Ajouté
-### Modifié
+-  reorganise### Modifié
 ### Corrigé
 ### Supprimé
 
 ## [1.1.2-alpha.2] - 2025-02-15
 ### Ajouté
--  done
--  none
--  auto tags
--  upgrade
--  auto upgrade
-### Modifié
+-  reorganise### Modifié
 ### Corrigé
 ### Supprimé
 
@@ -21,23 +16,13 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 
 ## [1.1.2-alpha.2] - 2025-02-15
 ### Ajouté
--  done
--  none
--  auto tags
--  upgrade
--  auto upgrade
-### Modifié
+-  reorganise### Modifié
 ### Corrigé
 ### Supprimé
 
 ## [1.1.1-alpha.1] - 2025-02-15 (Alpha)
 ### Ajouté
--  done
--  none
--  auto tags
--  upgrade
--  auto upgrade
--  Upgrade changelog write
+-  reorganise- Upgrade changelog write
 ### Modifié
 - Change feature convention name
 ### Corrigé
@@ -47,16 +32,11 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 
 ## [1.1.0] - 2024-02-27
 ### Ajouté
--  done
--  none
--  auto tags
--  upgrade
--  auto upgrade
--  Interface CLI interactive avec menu coloré et emojis
--  Gestion complète du workflow GitFlow
--  Système de commits conventionnels avec emojis
--  Validation automatique des noms de branches
--  Gestion des pré-releases (alpha, beta, rc)
+-  reorganise- Interface CLI interactive avec menu coloré et emojis
+- Gestion complète du workflow GitFlow
+- Système de commits conventionnels avec emojis
+- Validation automatique des noms de branches
+- Gestion des pré-releases (alpha, beta, rc)
 - Génération automatique du changelog
 - Commandes raccourcies : `flowmaster` et `fm`
 - Vérification de la propreté du répertoire de travail
@@ -81,12 +61,7 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 ## [1.0.1-alpha.1] - 2025-02-15
 ### ✨ Features
 ### Ajouté
--  done
--  none
--  auto tags
--  upgrade
--  auto upgrade
--  upgrade changelog write
+-  reorganise-  upgrade changelo write
 ### Modifié
 - 
 ### Corrigé

@@ -690,12 +690,30 @@ get_version_from_choice() {
 
 # Function to finish a release
 finish_release() {
-    ensure_clean_work_tree
+    ensure_clean_work_tree || return 1
     
-    local current_branch=$(git symbolic-ref --short HEAD)
+    # Vérifier si on est sur une branche release
+    local current_branch
+    current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+    
+    if [ -z "$current_branch" ]; then
+        error "Not in a git repository or no branch exists"
+        return 1
+    }
+    
     if [[ ! $current_branch =~ ^release/v[0-9]+\.[0-9]+\.[0-9]+(-((alpha|beta|rc)\.[0-9]+))?$ ]]; then
-        error "Must be on a release branch: release/vX.Y.Z[-prerelease]"
-    fi
+        error "Must be on a release branch: release/vX.Y.Z[-prerelease]" "no_exit"
+        echo -e "\n${YELLOW}Current branch: ${RED}$current_branch${NC}"
+        echo -e "\n${BLUE}Available release branches:${NC}"
+        
+        # Afficher les branches release disponibles
+        git branch -a | grep "release/" | sed 's/^[* ]//' | while read -r branch; do
+            echo -e "  ${GREEN}$branch${NC}"
+        done
+        
+        echo -e "\n${YELLOW}Please checkout a release branch first${NC}"
+        return 1
+    }
     
     local version=${current_branch#release/v}
     
@@ -704,35 +722,74 @@ finish_release() {
     # Finalize changelog before merging
     finalize_changelog "$version"
     
-    # For pre-release versions, only merge to develop
+    # Pour les versions pre-release, merger uniquement dans develop
     if [[ $version =~ -(.+)$ ]]; then
         info "Pre-release version detected, merging only to develop"
         
-        git checkout develop || error "Failed to checkout develop branch"
-        git pull origin develop || error "Failed to pull latest develop changes"
-        git merge --no-ff "$current_branch" -m "chore: merge pre-release $version to develop" || error "Failed to merge to develop"
-        git tag -a "v$version" -m "Pre-release version $version" || error "Failed to create tag"
+        if ! safe_git_command "git checkout develop" "develop"; then
+            return 1
+        fi
+        
+        if ! safe_git_command "git pull origin develop" "develop"; then
+            return 1
+        fi
+        
+        if ! safe_git_command "git merge --no-ff '$current_branch' -m 'chore: merge pre-release $version to develop'" "$current_branch"; then
+            return 1
+        fi
+        
+        if ! safe_git_command "git tag -a 'v$version' -m 'Pre-release version $version'" "tag"; then
+            return 1
+        fi
         
         # Push changes
-        git push origin develop "v$version" || error "Failed to push changes"
+        if ! safe_git_command "git push origin develop 'v$version'" "push"; then
+            return 1
+        fi
     else
-        # For stable versions, merge to both main and develop
-        git checkout main || error "Failed to checkout main branch"
-        git pull origin main || error "Failed to pull latest main changes"
-        git merge --no-ff "$current_branch" -m "chore: release version $version" || error "Failed to merge to main"
-        git tag -a "v$version" -m "Release version $version" || error "Failed to create tag"
+        # Pour les versions stables, merger dans main et develop
+        if ! safe_git_command "git checkout main" "main"; then
+            return 1
+        fi
         
-        git checkout develop || error "Failed to checkout develop branch"
-        git pull origin develop || error "Failed to pull latest develop changes"
-        git merge --no-ff "$current_branch" -m "chore: merge release $version to develop" || error "Failed to merge to develop"
+        if ! safe_git_command "git pull origin main" "main"; then
+            return 1
+        fi
         
-        # Push changes
-        git push origin main develop "v$version" || error "Failed to push changes"
+        if ! safe_git_command "git merge --no-ff '$current_branch' -m 'chore: release version $version'" "$current_branch"; then
+            return 1
+        fi
+        
+        if ! safe_git_command "git tag -a 'v$version' -m 'Release version $version'" "tag"; then
+            return 1
+        fi
+        
+        if ! safe_git_command "git checkout develop" "develop"; then
+            return 1
+        fi
+        
+        if ! safe_git_command "git pull origin develop" "develop"; then
+            return 1
+        fi
+        
+        if ! safe_git_command "git merge --no-ff '$current_branch' -m 'chore: merge release $version to develop'" "$current_branch"; then
+            return 1
+        fi
+        
+        # Push all changes
+        if ! safe_git_command "git push origin main develop 'v$version'" "push"; then
+            return 1
+        fi
     fi
     
     # Delete release branch
-    git branch -d "$current_branch" || warning "Failed to delete local release branch"
-    git push origin --delete "$current_branch" || warning "Failed to delete remote release branch"
+    if ! safe_git_command "git branch -d '$current_branch'" "delete local"; then
+        warning "Failed to delete local release branch"
+    fi
+    
+    if ! safe_git_command "git push origin --delete '$current_branch'" "delete remote"; then
+        warning "Failed to delete remote release branch"
+    fi
     
     success "Successfully finished release $version"
 }
