@@ -1,0 +1,30 @@
+{
+  "name": "flowmaster-cli",
+  "version": "1.1.2",
+  "description": "A modern GitFlow CLI tool",
+  "bin": {
+    "flowmaster": "./bin/flowmaster.js",
+    "fm": "./bin/flowmaster.js"
+  },
+  "files": [
+    "bin/",
+    "lib/"
+  ],
+  "scripts": {
+    "postinstall": "chmod +x ./lib/gitflow.sh",
+    "build": "mkdir -p lib && cp gitflow.sh lib/",
+    "publish-npm": "node scripts/publish-npm.js"
+  },
+  "keywords": [
+    "git",
+    "gitflow",
+    "cli",
+    "workflow"
+  ],
+  "author": "ndg23",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^8.3.0"
+  }
+}
