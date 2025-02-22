@@ -29,7 +29,8 @@ if (execSync('git status --porcelain', { encoding: 'utf8' }).length > 0) {
 console.log(`📦 Publishing version ${version}...`);
 
 try {
-  // Construction du package
+  // Nettoyer et préparer
+  exec('rm -rf lib');
   exec('npm run build');
 
   // Publication sur npm

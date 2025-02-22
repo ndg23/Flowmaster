@@ -8,10 +8,13 @@
   },
   "files": [
     "bin/",
-    "lib/"
+    "lib/",
+    "scripts/",
+    "gitflow.sh"
   ],
   "scripts": {
-    "postinstall": "chmod +x ./lib/gitflow.sh",
+    "prepublishOnly": "mkdir -p lib && cp gitflow.sh lib/",
+    "postinstall": "node scripts/postinstall.js",
     "build": "mkdir -p lib && cp gitflow.sh lib/",
     "publish-npm": "node scripts/publish-npm.js"
   },

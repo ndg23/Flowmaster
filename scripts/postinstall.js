@@ -67,6 +67,30 @@ function createInitialConfig() {
   }
 }
 
+// Chemin vers gitflow.sh
+const gitflowPath = path.join(__dirname, '..', 'gitflow.sh');
+const libPath = path.join(__dirname, '..', 'lib');
+
+// Créer le dossier lib s'il n'existe pas
+if (!fs.existsSync(libPath)) {
+  fs.mkdirSync(libPath, { recursive: true });
+}
+
+// Copier gitflow.sh dans lib s'il n'y est pas
+const libGitflowPath = path.join(libPath, 'gitflow.sh');
+if (!fs.existsSync(libGitflowPath)) {
+  fs.copyFileSync(gitflowPath, libGitflowPath);
+}
+
+// Rendre le script exécutable
+try {
+  fs.chmodSync(libGitflowPath, '755');
+  console.log('✅ Successfully configured Flowmaster');
+} catch (error) {
+  console.error('❌ Failed to set permissions:', error.message);
+  process.exit(1);
+}
+
 try {
   console.log('\x1b[36m⚙\x1b[0m Setting up Flowmaster...');
   
