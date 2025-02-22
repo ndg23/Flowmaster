@@ -1,6 +1,6 @@
 {
   "name": "flowmaster-cli",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "A modern GitFlow CLI tool",
   "bin": {
     "flowmaster": "./bin/flowmaster.js",
@@ -16,7 +16,8 @@
     "prepublishOnly": "mkdir -p lib && cp gitflow.sh lib/",
     "postinstall": "node scripts/postinstall.js",
     "build": "mkdir -p lib && cp gitflow.sh lib/",
-    "publish-npm": "node scripts/publish-npm.js"
+    "publish-npm": "node scripts/publish-npm.js",
+    "version": "node scripts/version.js && git add CHANGELOG.md"
   },
   "keywords": [
     "git",
