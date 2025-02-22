@@ -699,7 +699,7 @@ finish_release() {
     if [ -z "$current_branch" ]; then
         error "Not in a git repository or no branch exists"
         return 1
-    }
+    fi
     
     if [[ ! $current_branch =~ ^release/v[0-9]+\.[0-9]+\.[0-9]+(-((alpha|beta|rc)\.[0-9]+))?$ ]]; then
         error "Must be on a release branch: release/vX.Y.Z[-prerelease]" "no_exit"
@@ -713,7 +713,7 @@ finish_release() {
         
         echo -e "\n${YELLOW}Please checkout a release branch first${NC}"
         return 1
-    }
+    fi
     
     local version=${current_branch#release/v}
     

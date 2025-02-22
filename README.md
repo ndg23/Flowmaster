@@ -41,6 +41,34 @@ flowmaster init
 flowmaster
 ```
 
+## 🚀 Installation
+
+```bash
+# Installation globale (recommandée)
+sudo npm install -g flowmaster-cli
+
+# Vérifier l'installation
+flowmaster --version
+```
+
+### Prérequis
+- Node.js ≥ 12
+- Git
+- Permissions sudo (pour l'installation globale)
+
+### Résolution des problèmes
+
+Si vous rencontrez des erreurs de permissions :
+```bash
+# Donner les permissions d'exécution
+sudo chmod +x $(which flowmaster)
+sudo chmod +x $(which fm)
+
+# Ou réinstaller avec sudo
+sudo npm uninstall -g flowmaster-cli
+sudo npm install -g flowmaster-cli
+```
+
 ## 📚 Documentation
 
 For more detailed information on how to use FlowMaster, please refer to the [documentation](https://flowmaster-cli.readthedocs.io).

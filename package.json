@@ -13,11 +13,9 @@
     "gitflow.sh"
   ],
   "scripts": {
-    "prepublishOnly": "mkdir -p lib && cp gitflow.sh lib/",
+    "preinstall": "node scripts/preinstall.js",
     "postinstall": "node scripts/postinstall.js",
-    "build": "mkdir -p lib && cp gitflow.sh lib/",
-    "publish-npm": "node scripts/publish-npm.js",
-    "version": "node scripts/version.js && git add CHANGELOG.md"
+    "uninstall": "node scripts/uninstall.js"
   },
   "keywords": [
     "git",
@@ -30,5 +28,9 @@
   "dependencies": {
     "chalk": "^4.1.2",
     "commander": "^8.3.0"
+  },
+  "preferGlobal": true,
+  "engines": {
+    "node": ">=12"
   }
 }
