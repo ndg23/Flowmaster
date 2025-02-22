@@ -68,7 +68,8 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 ## [1.0.1-alpha.1] - 2025-02-15
 ### ✨ Features
 ### Ajouté
--  reorganise-  upgrade changelo write
+-  reorganise
+-  upgrade changelog write
 ### Modifié
 - 
 ### Corrigé
