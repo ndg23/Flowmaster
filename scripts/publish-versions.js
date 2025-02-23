@@ -11,7 +11,7 @@ function exec(command) {
     return execSync(command, { encoding: 'utf8' }).trim();
   } catch (error) {
     console.error(`Error executing command: ${command}`);
-    console.error(error.message);
+    console.error((error && error.message) ? error.message : 'Unknown error occurred');
     process.exit(1);
   }
 }
@@ -23,10 +23,29 @@ function updatePackageJson(version) {
   
   pkg.version = version;
   
-  // S'assurer que les champs requis sont présents
+  // Ensure required fields are present
   pkg.name = pkg.name || 'flowmaster-cli';
   pkg.description = pkg.description || 'A modern GitFlow CLI tool';
+  pkg.main = pkg.main || 'index.js';
   
+  // Add test configuration
+  pkg.scripts = pkg.scripts || {};
+  pkg.scripts.test = 'jest';
+  pkg.scripts['test:watch'] = 'jest --watch';
+  pkg.scripts['test:coverage'] = 'jest --coverage';
+  
+  // Add Jest configuration
+  pkg.jest = {
+    testEnvironment: 'node',
+    testMatch: ['**/__tests__/**/*.js', '**/?(*.)+(spec|test).js'],
+    coverageDirectory: 'coverage',
+    collectCoverageFrom: [
+      'src/**/*.js',
+      '!**/node_modules/**',
+      '!**/vendor/**'
+    ]
+  };
+
   fs.writeFileSync(packagePath, JSON.stringify(pkg, null, 2));
 }
 
@@ -70,11 +89,17 @@ tags.forEach(version => {
     
   } catch (error) {
     console.error(`❌ Failed to publish version ${version}`);
-    console.error(error.message);
+    console.error(error ? error.message : 'Unknown error occurred');
   }
 });
 
 // Retourner à la branche d'origine
 exec(`git checkout ${currentBranch}`);
 
-console.log('\n✨ All versions published successfully!'); 
+console.log('\n✨ All versions published successfully!');
+
+// Export functions for testing
+module.exports = {
+  exec,
+  updatePackageJson
+}; 

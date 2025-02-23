@@ -1,6 +1,6 @@
 {
   "name": "flowmaster-cli",
-  "version": "1.1.7-beta.0",
+  "version": "1.1.7",
   "description": "A modern GitFlow CLI tool",
   "bin": {
     "flowmaster": "./bin/flowmaster.js",
@@ -15,7 +15,12 @@
   "scripts": {
     "preinstall": "node scripts/preinstall.js",
     "postinstall": "node scripts/postinstall.js",
-    "uninstall": "node scripts/uninstall.js"
+    "uninstall": "node scripts/uninstall.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:unit": "jest --config jest.config.js" 
+
   },
   "keywords": [
     "git",
@@ -32,5 +37,21 @@
   "preferGlobal": true,
   "engines": {
     "node": ">=12"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/__tests__/**/*.js",
+      "**/?(*.)+(spec|test).js"
+    ],
+    "coverageDirectory": "coverage",
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!**/node_modules/**",
+      "!**/vendor/**"
+    ]
   }
 }
