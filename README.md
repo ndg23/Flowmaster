@@ -43,11 +43,15 @@ flowmaster
 
 ## 🚀 Installation
 
-```bash
-# Installation globale (recommandée)
-sudo npm install -g flowmaster-cli
+Pour installer FlowMaster CLI, exécutez la commande suivante :
 
-# Vérifier l'installation
+```bash
+npm install -g flowmaster-cli
+```
+
+Après l'installation, vous pouvez vérifier la version installée avec :
+
+```bash
 flowmaster --version
 ```
 
@@ -72,3 +76,9 @@ sudo npm install -g flowmaster-cli
 ## 📚 Documentation
 
 For more detailed information on how to use FlowMaster, please refer to the [documentation](https://flowmaster-cli.readthedocs.io).
+
+## Contribuer
+
+Nous accueillons les contributions ! Veuillez consulter notre [guide de contribution](CONTRIBUTING.md) pour plus d'informations sur la façon de contribuer à ce projet.
+
+Veuillez également lire notre [code de conduite](CODE_OF_CONDUCT.md) pour vous assurer que notre communauté reste accueillante et respectueuse.
