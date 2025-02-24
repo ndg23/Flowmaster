@@ -1,55 +1,55 @@
-# Contribuer à FlowMaster CLI
+# Contributing to FlowMaster CLI
 
-Merci de votre intérêt pour contribuer à FlowMaster CLI ! Voici quelques directives pour vous aider à commencer.
+Thank you for your interest in contributing to FlowMaster CLI! Here are some guidelines to help you get started.
 
-## Comment Contribuer
+## How to Contribute
 
-1. **Fork le projet** : Cliquez sur le bouton "Fork" en haut à droite de cette page pour créer votre propre copie du projet.
+1. **Fork the project**: Click the "Fork" button in the top right of this page to create your own copy of the project.
 
-2. **Clone le dépôt** : Clonez votre fork sur votre machine locale.
+2. **Clone the repository**: Clone your fork to your local machine.
 
    ```bash
-   git clone https://github.com/votre-utilisateur/flowmaster-cli.git
+   git clone https://github.com/ndg23/flowmaster
    cd flowmaster-cli
    ```
 
-3. **Créez une branche** : Créez une nouvelle branche pour votre fonctionnalité ou correction de bug.
+3. **Create a branch**: Create a new branch for your feature or bug fix.
 
    ```bash
-   git checkout -b ma-nouvelle-fonctionnalité
+   git checkout -b my-new-feature
    ```
 
-4. **Faites vos modifications** : Apportez vos modifications et assurez-vous de tester votre code.
+4. **Make your changes**: Make your changes and ensure you test your code.
 
-5. **Ajoutez des tests** : Si vous ajoutez une nouvelle fonctionnalité, n'oubliez pas d'ajouter des tests pour couvrir votre code.
+5. **Add tests**: If you're adding a new feature, don't forget to add tests to cover your code.
 
-6. **Commitez vos modifications** : Ajoutez un message de commit clair et descriptif.
+6. **Commit your changes**: Add a clear and descriptive commit message.
 
    ```bash
    git add .
-   git commit -m "Ajout de ma nouvelle fonctionnalité"
+   git commit -m "Add my new feature"
    ```
 
-7. **Poussez vos modifications** : Poussez votre branche vers votre fork.
+7. **Push your changes**: Push your branch to your fork.
 
    ```bash
-   git push origin ma-nouvelle-fonctionnalité
+   git push origin my-new-feature
    ```
 
-8. **Ouvrez une Pull Request** : Allez sur la page de votre fork sur GitHub et cliquez sur "New Pull Request". Suivez les instructions pour soumettre votre PR.
+8. **Open a Pull Request**: Go to your fork's page on GitHub and click "New Pull Request". Follow the instructions to submit your PR.
 
-## Règles de Contribution
+## Contribution Rules
 
-- **Respectez le style de code** : Assurez-vous que votre code suit le style de code du projet. Utilisez des outils comme ESLint pour vérifier la qualité du code.
+- **Follow code style**: Ensure your code follows the project's code style. Use tools like ESLint to check code quality.
 
-- **Écrivez des tests** : Toute nouvelle fonctionnalité doit être accompagnée de tests. Assurez-vous que tous les tests passent avant de soumettre votre PR.
+- **Write tests**: All new features must be accompanied by tests. Ensure all tests pass before submitting your PR.
 
-- **Soyez respectueux** : Traitez les autres contributeurs avec respect. Nous voulons créer un environnement accueillant pour tous.
+- **Be respectful**: Treat other contributors with respect. We want to create a welcoming environment for everyone.
 
-- **Suivez les conventions de commit** : Utilisez des messages de commit clairs et descriptifs. Par exemple, utilisez le format suivant : `type: description` (ex. `feat: ajout d'une nouvelle fonctionnalité`).
+- **Follow commit conventions**: Use clear and descriptive commit messages. For example, use the following format: `type: description` (e.g., `feat: add new feature`).
 
-## Questions ?
+## Questions?
 
-Si vous avez des questions, n'hésitez pas à ouvrir une issue ou à contacter les mainteneurs du projet.
+If you have any questions, don't hesitate to open an issue or contact the project maintainers.
 
-Merci de contribuer à FlowMaster CLI !
+Thank you for contributing to FlowMaster CLI!

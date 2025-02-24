@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const chalk = require('chalk');
 
 function installGlobally() {
   try {
@@ -38,6 +39,10 @@ function installGlobally() {
     console.log('You can now use:');
     console.log('  • flowmaster');
     console.log('  • fm');
+
+    console.log(chalk.cyan('\n💖 Enjoy FlowMaster CLI? Consider supporting the development!\n'));
+    console.log(chalk.white('PayPal: https://paypal.me/VOTRE_USERNAME_PAYPAL'));
+    console.log(chalk.white('GitHub Sponsors: https://github.com/sponsors/ndg23\n'));
 
   } catch (error) {
     if (error.code === 'EACCES') {

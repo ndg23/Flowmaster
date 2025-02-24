@@ -1,203 +1,148 @@
-# Journal des modifications
+# 📝 Journal des modifications | Changelog | Registro de cambios
 
-## [1.1.8] - 2025-02-24
+_Ce projet suit [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) et [Semantic Versioning](https://semver.org/spec/v2.0.0.html)._
+## [1.1.9] - 2025-02-24 🚀
 
-### Ajouté (Français)
-- Correction des problèmes d'installation npm
-- Amélioration de la gestion des fichiers
+### 🌟 Nouveautés | New Features | Nuevas Características
 
-### Added (English)
-- Fixed npm installation issues
-- Improved file management
+🇫🇷 **Français**
+- ⚙️ Correction des problèmes d'installation npm
+- 📁 Amélioration de la gestion des fichiers
 
-### Agregado (Español)
-- Corrección de problemas de instalación de npm
-- Mejora en la gestión de archivos
+🇬🇧 **English**
+- ⚙️ Fixed npm installation issues
+- 📁 Improved file management
 
-### Modifié (Français)
-- Restructuration du package npm
+🇪🇸 **Español**
+- ⚙️ Corrección de problemas de instalación de npm
+- 📁 Mejora en la gestión de archivos
 
-### Modified (English)
-- Restructured the npm package
+## [1.1.8] - 2025-02-24 🚀
 
-### Modificado (Español)
-- Reestructuración del paquete npm
+### 🌟 Nouveautés | New Features | Nuevas Características
 
-### Corrigé (Français)
-- Problème de permissions sur gitflow.sh
-- Gestion des chemins de fichiers
+🇫🇷 **Français**
+- ⚙️ Correction des problèmes d'installation npm
+- 📁 Amélioration de la gestion des fichiers
 
-### Fixed (English)
-- Permissions issue on gitflow.sh
-- File path management
+🇬🇧 **English**
+- ⚙️ Fixed npm installation issues
+- 📁 Improved file management
 
-### Corregido (Español)
-- Problema de permisos en gitflow.sh
-- Gestión de rutas de archivos
+🇪🇸 **Español**
+- ⚙️ Corrección de problemas de instalación de npm
+- 📁 Mejora en la gestión de archivos
 
----
+### 🔄 Modifications | Changes | Cambios
 
-## [1.1.5] - 2025-02-22
+🇫🇷 **Français**
+- 📦 Restructuration du package npm
 
-### Ajouté (Français)
-- Nouvelle fonctionnalité pour la gestion des erreurs améliorée
-- Ajout d'une option de configuration pour les utilisateurs
+🇬🇧 **English**
+- 📦 Restructured the npm package
 
-### Added (English)
-- New feature for improved error handling
-- Added a configuration option for users
+🇪🇸 **Español**
+- 📦 Reestructuración del paquete npm
 
-### Agregado (Español)
-- Nueva funcionalidad para la gestión de errores mejorada
-- Se agregó una opción de configuración para los usuarios
+### 🐛 Corrections | Fixes | Correcciones
 
-### Modifié (Français)
-- Amélioration des performances de la commande `status`
-- Mise à jour des messages d'erreur pour plus de clarté
+🇫🇷 **Français**
+- 🔐 Problème de permissions sur gitflow.sh
+- 🛣️ Gestion des chemins de fichiers
 
-### Modified (English)
-- Improved performance of the `status` command
-- Updated error messages for clarity
+🇬🇧 **English**
+- 🔐 Permissions issue on gitflow.sh
+- 🛣️ File path management
 
-### Modificado (Español)
-- Mejora del rendimiento del comando `status`
-- Actualización de los mensajes de error para mayor claridad
-
-### Corrigé (Français)
-- Correction d'un bug qui empêchait l'affichage correct de la version
-- Résolution d'un problème de compatibilité avec certaines versions de Node.js
-
-### Fixed (English)
-- Fixed a bug that prevented the correct display of the version
-- Resolved a compatibility issue with certain versions of Node.js
-
-### Corregido (Español)
-- Corrección de un error que impedía la visualización correcta de la versión
-- Resolución de un problema de compatibilidad con ciertas versiones de Node.js
+🇪🇸 **Español**
+- 🔐 Problema de permisos en gitflow.sh
+- 🛣️ Gestión de rutas de archivos
 
 ---
 
-## [1.1.0] - 2025-02-18
-### Ajouté (Français)
-- reorganise
+## [1.1.5] - 2025-02-22 🎯
 
-### Added (English)
-- reorganise
+### 🌟 Nouveautés | New Features | Nuevas Características
 
-### Agregado (Español)
-- reorganise
+🇫🇷 **Français**
+- ⚡️ Nouvelle fonctionnalité pour la gestion des erreurs améliorée
+- ⚙️ Ajout d'une option de configuration pour les utilisateurs
 
----
+🇬🇧 **English**
+- ⚡️ New feature for improved error handling
+- ⚙️ Added configuration option for users
 
-## [1.0.1-beta.1] - 2025-02-21
-### Ajouté (Français)
-### Added (English)
-### Agregado (Español)
-
----
-
-## [1.1.2-alpha.2] - 2025-02-15
-### Ajouté (Français)
-- reorganise
-
-### Added (English)
-- reorganise
-
-### Agregado (Español)
-- reorganise
+🇪🇸 **Español**
+- ⚡️ Nueva funcionalidad para gestión de errores mejorada
+- ⚙️ Agregada opción de configuración para usuarios
 
 ---
 
-## [1.1.1-alpha.1] - 2025-02-15 (Alpha)
-### Ajouté (Français)
-- reorganise
-- Upgrade changelog write
+## [1.1.1-alpha.1] - 2025-02-15 🐛
 
-### Added (English)
-- reorganise
-- Upgrade changelog write
+### 🛠️ Corrections | Bug Fixes | Correcciones
 
-### Agregado (Español)
-- reorganise
-- Actualizar la escritura del changelog
+🇫🇷 **Français**
+- 🔧 Modification du processus d'installation
+- 📝 Changement de la convention de nommage des fonctionnalités
+- ✨ Ajout de nouvelles fonctionnalités
 
----
+🇬🇧 **English**
+- 🔧 Changes in installation process
+- 📝 Change in feature naming convention
+- ✨ Added new features
 
-## [1.1.0] - 2024-02-27
-### Ajouté (Français)
-- reorganise
-- Interface CLI interactive avec menu coloré et emojis
-- Gestion complète du workflow GitFlow
-- Système de commits conventionnels avec emojis
-- Validation automatique des noms de branches
-- Gestion des pré-releases (alpha, beta, rc)
-- Génération automatique du changelog
-- Commandes raccourcies : `flowmaster` et `fm`
-- Vérification de la propreté du répertoire de travail
-- Gestion des hotfix pour les corrections urgentes
-
-### Added (English)
-- reorganise
-- Interactive CLI interface with colored menu and emojis
-- Complete management of the GitFlow workflow
-- Conventional commits system with emojis
-- Automatic validation of branch names
-- Management of pre-releases (alpha, beta, rc)
-- Automatic changelog generation
-- Short commands: `flowmaster` and `fm`
-- Check for a clean working directory
-- Management of hotfixes for urgent fixes
-
-### Agregado (Español)
-- reorganise
-- Interfaz CLI interactiva con menú de colores y emojis
-- Gestión completa del flujo de trabajo de GitFlow
-- Sistema de commits convencionales con emojis
-- Validación automática de nombres de ramas
-- Gestión de pre-lanzamientos (alpha, beta, rc)
-- Generación automática del changelog
-- Comandos abreviados: `flowmaster` y `fm`
-- Verificación de la limpieza del directorio de trabajo
-- Gestión de hotfixes para correcciones urgentes
+🇪🇸 **Español**
+- 🔧 Cambios en el proceso de instalación
+- 📝 Cambio en la convención de nombres de características
+- ✨ Agregado de nuevas funcionalidades
 
 ---
 
-## [1.0.1-alpha.1] - 2025-02-15
-### Ajouté (Français)
-- reorganise
-- upgrade changelog write
+## [1.0.1-alpha.1] - 2025-02-08 🚀
 
-### Added (English)
-- reorganise
-- upgrade changelog write
+### 🔄 Modifications | Changes | Cambios
 
-### Agregado (Español)
-- reorganise
-- actualizar la escritura del changelog
+🇫🇷 **Français**
+- 📦 Réorganisation de la structure
+- 📝 Amélioration de l'écriture du changelog
 
----
+🇬🇧 **English**
+- 📦 Reorganization of structure
+- 📝 Improvement of changelog writing
 
-## [1.1.1-alpha.1] - 2025-02-08
-### 🐛 Bug Fixes
-### Ajouté (Français)
-- fix: changes installation process
-- fix: Change feature convention name
-- fix: just added new
-
-### Added (English)
-- fix: changes installation process
-- fix: Change feature convention name
-- fix: just added new
-
-### Agregado (Español)
-- fix: cambios en el proceso de instalación
-- fix: Cambiar el nombre de la convención de características
-- fix: solo se agregó nuevo
+🇪🇸 **Español**
+- 📦 Reorganización de la estructura
+- 📝 Mejora de la escritura del changelog
 
 ---
 
-Toutes les modifications notables de ce projet seront documentées dans ce fichier.
+## 📋 Notes de version | Release Notes | Notas de versión
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+### Migration | Migration | Migración
+- 📈 1.0.x → 1.1.x : Mise à jour simple, pas de changements cassants
+- 🔄 Utilisez `fm update` pour la mise à jour automatique
 
+### Support | Support | Soporte
+- 💬 Questions : [Discord](https://discord.gg/flowmaster)
+- 🐛 Bugs : [GitHub Issues](https://github.com/ndg23/flowmaster/issues)
+- 💖 Support : [Sponsors](SPONSORS.md)
+
+### Contributeurs | Contributors | Colaboradores
+Merci à tous nos contributeurs ! | Thanks to all our contributors! | ¡Gracias a todos nuestros colaboradores!
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/ndg23">
+        <img src="https://github.com/ndg23.png" width="100px;" alt="ndg23"/>
+        <br />
+        <sub><b>ndg23</b></sub>
+      </a>
+    </td>
+  </tr>
+</table>
+
+---
+
+📅 Dernière mise à jour | Last update | Última actualización: 2025-02-24
