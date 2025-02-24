@@ -1,5 +1,12 @@
 # 📝 Journal des modifications | Changelog | Registro de cambios
 
+## [1.2.3-rc.1] - 2025-02-24
+### Ajouté
+### Modifié
+### Corrigé
+### Supprimé
+
+
 ## [1.2.2-rc.1] - 2025-02-24
 ### Ajouté
 ### Modifié
