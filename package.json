@@ -1,6 +1,6 @@
 {
   "name": "flowmaster-cli",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "A modern GitFlow CLI tool",
   "bin": {
     "flowmaster": "./bin/flowmaster.js",
