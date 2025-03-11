@@ -974,9 +974,7 @@ update_changelog() {
     
     # Create changelog if it doesn't exist
     if [ ! -f "$changelog_file" ]; then
-        echo "# Journal des modifications
-
-Toutes les modifications notables de ce projet seront documentées dans ce fichier.
+        echo "# 📝 Journal des modifications | Changelog | Registro de cambios
 
 ## [Unreleased]
 ### Ajouté
@@ -1013,13 +1011,25 @@ $section" "$changelog_file"
             rm -f "$changelog_file.bak"
         fi
         
-        # Add the entry under the appropriate section
+        # Add the entry under the appropriate section with emoji
+        # Choose an appropriate emoji based on the section
+        local emoji=""
+        if [[ "$section" == "### Ajouté" ]]; then
+            emoji="✨"
+        elif [[ "$section" == "### Modifié" ]]; then
+            emoji="🔄"
+        elif [[ "$section" == "### Corrigé" ]]; then
+            emoji="🐛"
+        elif [[ "$section" == "### Supprimé" ]]; then
+            emoji="🗑️"
+        fi
+        
         sed -i.bak "/^$section/a\\
-- $entry" "$changelog_file"
+- $emoji $entry" "$changelog_file"
         rm -f "$changelog_file.bak"
         
         git add "$changelog_file"
-        info "Updated CHANGELOG.md with: $entry"
+        info "Updated CHANGELOG.md with: $emoji $entry"
     fi
 }
 
@@ -1097,10 +1107,11 @@ finalize_changelog() {
     if ! grep -q "## \[$version\]" "$changelog_file"; then
         # Create temporary file
         local temp_file=$(mktemp)
+        local emoji="🚀"
         
-        # Add new version section after the first line
-        awk -v version="$version" -v date="$today" '
-        NR==1 {print; print "\n## [" version "] - " date; print "### Ajouté\n### Modifié\n### Corrigé\n### Supprimé\n"}
+        # Add new version section after the first line, with consistent format
+        awk -v version="$version" -v date="$today" -v emoji="$emoji" '
+        NR==1 {print; print "\n## [" version "] - " date " " emoji; print "### Ajouté\n### Modifié\n### Corrigé\n### Supprimé\n"}
         NR!=1 {print}
         ' "$changelog_file" > "$temp_file"
         
@@ -1279,94 +1290,80 @@ show_menu() {
     esac
 }
 
-# Function to get feature name
-get_feature_name() {
-    echo
-    echo -e "${BOLD}Start New Feature${NC}"
-    echo -e "${CYAN}═══════════════════════════════════${NC}"
-    echo
+# Main menu loop
+# while true; do
+#     show_menu
+# done 
 
-    # Get feature name
+# Function to run the interactive menu
+run_interactive_menu() {
     while true; do
-        echo -e "${YELLOW}Enter feature name:${NC}"
-        read -r desc
-        # Convert to kebab-case and clean up
-        desc=$(echo "$desc" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | sed 's/[^a-z0-9-]//g')
-        if [[ -n "$desc" ]]; then
+        show_menu
+        # Exit if user selected option 9
+        if [ "$choice" = "9" ]; then
             break
-        else
-            echo -e "${RED}Feature name cannot be empty${NC}"
         fi
     done
+}
 
-    # Construct branch name
-    branch_name="feature/$desc"
-    
-    echo -e "\n${GREEN}Branch name will be: $branch_name${NC}"
-    echo -e "${YELLOW}Continue? [Y/n]${NC}"
-    read -r response
-    if [[ "$response" =~ ^[Nn]$ ]]; then
-        error "Branch creation cancelled"
-        return 1
+# Main function to process command-line arguments
+main() {
+    if [ $# -eq 0 ]; then
+        # No arguments, run interactive menu
+        run_interactive_menu
+    else
+        # Process command
+        case "$1" in
+            "init")
+                init_project
+                ;;
+            "reorganize")
+                reorganize_project
+                ;;
+            "feature")
+                if [ "$2" = "start" ] && [ -n "$3" ]; then
+                    branch_name="feature/$3"
+                    start_feature "$branch_name"
+                elif [ "$2" = "finish" ]; then
+                    finish_feature
+                else
+                    error "Invalid feature command. Usage: feature start <name> or feature finish"
+                fi
+                ;;
+            "release")
+                if [ "$2" = "start" ]; then
+                    start_release
+                elif [ "$2" = "finish" ]; then
+                    finish_release
+                else
+                    error "Invalid release command. Usage: release start or release finish"
+                fi
+                ;;
+            "hotfix")
+                if [ "$2" = "start" ] && [ -n "$3" ]; then
+                    start_hotfix "$3"
+                elif [ "$2" = "finish" ]; then
+                    finish_hotfix
+                else
+                    error "Invalid hotfix command. Usage: hotfix start <version> or hotfix finish"
+                fi
+                ;;
+            "commit")
+                create_commit
+                ;;
+            "status")
+                show_status
+                ;;
+            "config")
+                # Handle config options
+                echo "Config options: $2"
+                ;;
+            *)
+                error "Unknown command: $1"
+                ;;
+        esac
     fi
-    
-    echo
 }
 
-# Function to get version number
-get_version() {
-    echo
-    echo -e "${BOLD}Enter Version Number${NC}"
-    echo -e "${CYAN}═══════════════════════════════════${NC}"
-    echo
-    echo -e "${YELLOW}Version format:${NC} X.Y.Z[-prerelease] (Semantic Versioning)"
-    echo -e "  ${BLUE}X${NC} = Major version (breaking changes)"
-    echo -e "  ${BLUE}Y${NC} = Minor version (new features)"
-    echo -e "  ${BLUE}Z${NC} = Patch version (bug fixes)"
-    echo -e "  ${BLUE}-prerelease${NC} = Optional pre-release identifier (alpha.N, beta.N, rc.N)"
-    echo
-    echo -e "${YELLOW}Examples:${NC}"
-    echo -e "  1.0.0        (Stable release)"
-    echo -e "  1.1.0-alpha.1 (Alpha release)"
-    echo -e "  2.0.0-beta.2  (Beta release)"
-    echo -e "  1.2.0-rc.1    (Release candidate)"
-    echo
-    read -p "Enter version number: " version
-    echo
-}
-
-# Function to show current status with modern display
-show_status() {
-    clear
-    echo
-    echo -e "${BOLD}             Git Status Overview${NC}"
-    echo
-    echo -e "${CYAN}╭───────────────────────────────────────╮${NC}"
-    
-    # Branch Info
-    echo -e "${CYAN}│${NC} ${BOLD}Current Branch${NC}                         ${CYAN}│${NC}"
-    echo -e "${CYAN}│${NC} $(git branch --show-current)                    ${CYAN}│${NC}"
-    echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
-    
-    # Recent Commits
-    echo -e "${CYAN}│${NC} ${BOLD}Recent Commits${NC}                         ${CYAN}│${NC}"
-    git log --oneline -n 5 | while read -r line; do
-        echo -e "${CYAN}│${NC} ${BLUE}$line${NC}                     ${CYAN}│${NC}"
-    done
-    echo -e "${CYAN}├───────────────────────────────────────┤${NC}"
-    
-    # Working Tree Status
-    echo -e "${CYAN}│${NC} ${BOLD}Working Tree Status${NC}                    ${CYAN}│${NC}"
-    git status -s | while read -r line; do
-        echo -e "${CYAN}│${NC} ${YELLOW}$line${NC}                            ${CYAN}│${NC}"
-    done
-    
-    echo -e "${CYAN}╰───────────────────────────────────────╯${NC}"
-    echo
-    read -p "Press Enter to continue..."
-}
-
-# Main menu loop
-while true; do
-    show_menu
-done 
+# Execute main function with all arguments
+main "$@" 

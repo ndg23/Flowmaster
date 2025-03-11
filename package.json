@@ -1,57 +1,61 @@
 {
-  "name": "flowmaster-cli",
-  "version": "1.1.10",
-  "description": "A modern GitFlow CLI tool",
-  "bin": {
-    "flowmaster": "./bin/flowmaster.js",
-    "fm": "./bin/flowmaster.js"
-  },
-  "files": [
-    "bin/",
-    "lib/",
-    "scripts/",
-    "gitflow.sh"
-  ],
-  "scripts": {
-    "preinstall": "node scripts/preinstall.js",
-    "postinstall": "node scripts/postinstall.js",
-    "uninstall": "node scripts/uninstall.js",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test:unit": "jest --config jest.config.js" 
-
-  },
-  "keywords": [
-    "git",
-    "gitflow",
-    "cli",
-    "workflow"
-  ],
-  "author": "ndg23",
-  "license": "MIT",
-  "dependencies": {
-    "chalk": "^4.1.2",
-    "commander": "^8.3.0"
-  },
-  "preferGlobal": true,
-  "engines": {
-    "node": ">=12"
-  },
-  "devDependencies": {
-    "jest": "^29.7.0"
-  },
-  "jest": {
-    "testEnvironment": "node",
-    "testMatch": [
-      "**/__tests__/**/*.js",
-      "**/?(*.)+(spec|test).js"
+    "name": "flowmaster-cli",
+    "version": "1.1.10",
+    "description": "A modern GitFlow CLI tool",
+    "bin": {
+        "flowmaster": "./bin/flowmaster.js",
+        "fm": "./bin/flowmaster.js"
+    },
+    "files": [
+        "bin/",
+        "lib/",
+        "scripts/",
+        "gitflow.sh"
     ],
-    "coverageDirectory": "coverage",
-    "collectCoverageFrom": [
-      "src/**/*.js",
-      "!**/node_modules/**",
-      "!**/vendor/**"
-    ]
-  }
+    "scripts": {
+        "preinstall": "node scripts/preinstall.js",
+        "postinstall": "node scripts/postinstall.js",
+        "uninstall": "node scripts/uninstall.js",
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "test:coverage": "jest --coverage",
+        "test:unit": "jest --config jest.config.js",
+        "test:init": "jest __tests__/cli.test.js -t 'should initialize'",
+        "test:reorganize": "jest __tests__/cli.test.js -t 'should reorganize'",
+        "test:changelog": "jest __tests__/changelog.test.js",
+        "standardize-changelog": "node scripts/standardize-changelog.js",
+        "fix-changelog": "node scripts/fix-changelog.js"
+    },
+    "keywords": [
+        "git",
+        "gitflow",
+        "cli",
+        "workflow"
+    ],
+    "author": "ndg23",
+    "license": "MIT",
+    "dependencies": {
+        "chalk": "^4.1.2",
+        "commander": "^8.3.0"
+    },
+    "preferGlobal": true,
+    "engines": {
+        "node": ">=12"
+    },
+    "devDependencies": {
+        "jest": "^29.7.0"
+    },
+    "jest": {
+        "testEnvironment": "node",
+        "testMatch": [
+            "**/__tests__/**/*.js",
+            "**/?(*.)+(spec|test).js"
+        ],
+        "coverageDirectory": "coverage",
+        "collectCoverageFrom": [
+            "src/**/*.js",
+            "!**/node_modules/**",
+            "!**/vendor/**"
+        ]
+    }
 }

@@ -1,5 +1,10 @@
-github: @ndg23
-patreon: # Optional username
-open_collective: # Optional username
-ko_fi: # Optional username
-custom: ['https://paypal.me/marvinndg']
+# These are supported funding platforms
+github: [ndg23]  # Fixed syntax - username without @
+patreon: ndg23
+open_collective: flowmaster
+ko_fi: ndg23
+liberapay: ndg23
+issuehunt: ndg23
+custom: 
+  - 'https://paypal.me/marvinndg'
+  - 'https://buymeacoffee.com/ndg23'  # Optional: Add if you have Buy Me a Coffee

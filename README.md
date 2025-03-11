@@ -35,11 +35,31 @@ npm install -g flowmaster-cli
 flowmaster init
 ```
 
+This will:
+- Set up Git repository if needed
+- Create main and develop branches
+- Set up basic project structure
+- Configure Git hooks for commit message validation
+- Create initial files (README.md, CHANGELOG.md, .gitignore, etc.)
+
 3. Start the interactive menu:
 
 ```bash
 flowmaster
 ```
+
+4. For existing projects, reorganize to follow GitFlow:
+
+```bash
+flowmaster reorganize
+```
+
+This will:
+- Analyze your current repository structure
+- Set up main and develop branches if they don't exist
+- Help rename branches to follow GitFlow naming conventions
+- Configure Git hooks for commit message validation
+- Create CHANGELOG.md if it doesn't exist
 
 ## 🚀 Installation
 
@@ -73,11 +93,51 @@ sudo npm uninstall -g flowmaster-cli
 sudo npm install -g flowmaster-cli
 ```
 
+## 📝 Changelog Management
+
+FlowMaster CLI automatically manages your project's changelog:
+
+- 🔄 Automatically updates CHANGELOG.md when creating commits with conventional commit format
+- 📊 Organizes changes into categories (Added, Modified, Fixed, Removed)
+- 🚀 Finalizes changelog entries when releasing versions
+- 💅 Maintains consistent formatting with emojis for better readability
+
+### Changelog Scripts
+
+FlowMaster includes scripts to help maintain your changelog:
+
+```bash
+# Fix and standardize the format of your changelog
+npm run fix-changelog
+
+# Standardize the format of your changelog
+npm run standardize-changelog
+```
+
 ## Contribuer
 
 Nous accueillons les contributions ! Veuillez consulter notre [guide de contribution](CONTRIBUTING.md) pour plus d'informations sur la façon de contribuer à ce projet.
 
 Veuillez également lire notre [code de conduite](CODE_OF_CONDUCT.md) pour vous assurer que notre communauté reste accueillante et respectueuse.
+
+## 🧪 Testing
+
+FlowMaster CLI includes comprehensive tests to ensure functionality works as expected. To run the tests:
+
+```bash
+# Run all tests
+npm test
+
+# Run specific test suites
+npm run test:init        # Test initialization functionality
+npm run test:reorganize  # Test project reorganization
+npm run test:changelog   # Test changelog management
+
+# Run tests with coverage report
+npm run test:coverage
+```
+
+When contributing new features, please include tests to verify your implementation works correctly.
 
 ## 💖 Sponsorship
 

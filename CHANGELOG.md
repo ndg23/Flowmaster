@@ -1,20 +1,33 @@
 # 📝 Journal des modifications | Changelog | Registro de cambios
 
-## [1.2.3-rc.1] - 2025-02-24
+## [1.2.3-rc.1] - 2025-02-24 🚀
+### Ajouté
+- 💰 Amélioration des options de financement dans la commande `donate`
+- 📄 Mise à jour du fichier FUNDING.yml avec plus de plateformes
+- 🌐 Support multilingue amélioré pour la documentation
+
+### Modifié
+- ⚙️ Restructuration de l'interface de ligne de commande
+- 🔄 Optimisation des performances pour les grands dépôts
+- 📊 Amélioration de l'affichage des statistiques
+
+### Corrigé
+- 🐛 Résolution du problème d'affichage des liens de donation
+- 🔧 Correction des erreurs de permissions sur certains systèmes
+- 🔍 Résolution des problèmes de détection de branches
+
+### Supprimé
+- 🗑️ Suppression des options obsolètes dans la configuration
+- 📦 Nettoyage des dépendances non utilisées
+
+
+## [1.2.2-rc.1] - 2025-02-24 🚀
 ### Ajouté
 ### Modifié
 ### Corrigé
 ### Supprimé
 
 
-## [1.2.2-rc.1] - 2025-02-24
-### Ajouté
-### Modifié
-### Corrigé
-### Supprimé
-
-
-_Ce projet suit [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) et [Semantic Versioning](https://semver.org/spec/v2.0.0.html)._
 ## [1.1.9] - 2025-02-24 🚀
 
 ### 🌟 Nouveautés | New Features | Nuevas Características
@@ -74,7 +87,7 @@ _Ce projet suit [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) et [Sem
 
 ---
 
-## [1.1.5] - 2025-02-22 🎯
+## [1.1.5] - 2025-02-24 🚀 🎯
 
 ### 🌟 Nouveautés | New Features | Nuevas Características
 
@@ -92,7 +105,7 @@ _Ce projet suit [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) et [Sem
 
 ---
 
-## [1.1.1-alpha.1] - 2025-02-15 🐛
+## [1.1.1-alpha.1] - 2025-02-24 🚀 🐛
 
 ### 🛠️ Corrections | Bug Fixes | Correcciones
 
@@ -113,7 +126,7 @@ _Ce projet suit [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) et [Sem
 
 ---
 
-## [1.0.1-alpha.1] - 2025-02-08 🚀
+## [1.0.1-alpha.1] - 2025-02-24 🚀
 
 ### 🔄 Modifications | Changes | Cambios
 
