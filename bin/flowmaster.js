@@ -15,7 +15,9 @@ program
 // Execute GitFlow menu
 function executeGitFlowMenu() {
   try {
-    const gitflowScript = join(__dirname, '../lib/gitflow.sh');
+    // Utiliser un script personnalisé pour les tests si spécifié
+    const gitflowScript = process.env.GITFLOW_SCRIPT || 
+      join(__dirname, '../lib/gitflow.sh');
     
     execSync(`bash "${gitflowScript}"`, {
       stdio: 'inherit',
