@@ -1,12 +1,29 @@
 # 📝 Journal des modifications | Changelog | Registro de cambios
 
-## [1.1.10] - 2025-04-13
+## [1.3.2] - 2024-03-21
+
+### Ajouté
+- Nouvelle fonction d'initialisation de projet avec configuration Git complète
+- Menu interactif amélioré avec option d'initialisation
+- Création automatique des fichiers essentiels (README.md, CHANGELOG.md, .gitignore)
+- Configuration automatique des branches main et develop
+
+### Modifié
+- Restructuration du menu principal avec nouvelle option d'initialisation
+- Amélioration de l'interface utilisateur avec plus de retours visuels
+- Mise à jour de la numérotation des options du menu (Exit est maintenant [0])
+
+### Corrigé
+- Correction de la gestion des chemins dans la création des fichiers
+- Amélioration de la gestion des erreurs lors de l'initialisation
+- Correction des problèmes de permissions sur les nouveaux fichiers
+
+## [Unreleased]
+
 ### Ajouté
 ### Modifié
 ### Corrigé
--  fix createion of release
 ### Supprimé
-
 
 _Ce projet suit [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) et [Semantic Versioning](https://semver.org/spec/v2.0.0.html)._
 ## [1.1.9] - 2025-02-24 🚀
