@@ -1,9 +1,10 @@
 # 📝 Journal des modifications | Changelog | Registro de cambios
 
-## [1.2.1] - 2025-04-13
+## [1.1.10] - 2025-04-13
 ### Ajouté
 ### Modifié
 ### Corrigé
+-  fix createion of release
 ### Supprimé
 
 
