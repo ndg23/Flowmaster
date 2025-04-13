@@ -3,8 +3,8 @@
   "version": "1.3.2",
   "description": "A modern GitFlow CLI tool",
   "bin": {
-    "flowmaster": "./bin/flowmaster.js",
-    "fm": "./bin/flowmaster.js"
+    "flowmaster": "bin/flowmaster.js",
+    "fm": "bin/flowmaster.js"
   },
   "files": [
     "bin/",
