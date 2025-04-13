@@ -1,5 +1,12 @@
 # 📝 Journal des modifications | Changelog | Registro de cambios
 
+## [1.2.1] - 2025-04-13
+### Ajouté
+### Modifié
+### Corrigé
+### Supprimé
+
+
 _Ce projet suit [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) et [Semantic Versioning](https://semver.org/spec/v2.0.0.html)._
 ## [1.1.9] - 2025-02-24 🚀
 
