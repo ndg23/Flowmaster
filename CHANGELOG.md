@@ -1,6 +1,6 @@
 # 📝 Journal des modifications | Changelog | Registro de cambios
 
-## [1.3.0] - 2025-02-24
+## [1.2.1] - 2025-04-13
 ### Ajouté
 ### Modifié
 ### Corrigé

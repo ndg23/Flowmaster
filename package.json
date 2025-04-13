@@ -19,8 +19,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:unit": "jest --config jest.config.js" 
-
+    "test:unit": "jest --config jest.config.js"
   },
   "keywords": [
     "git",
@@ -44,14 +43,11 @@
   "jest": {
     "testEnvironment": "node",
     "testMatch": [
-      "**/__tests__/**/*.js",
-      "**/?(*.)+(spec|test).js"
+      "**/tests/**/*.test.js"
     ],
-    "coverageDirectory": "coverage",
     "collectCoverageFrom": [
-      "src/**/*.js",
-      "!**/node_modules/**",
-      "!**/vendor/**"
+      "bin/**/*.js",
+      "lib/**/*.sh"
     ]
   }
 }

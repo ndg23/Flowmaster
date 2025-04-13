@@ -1186,11 +1186,8 @@ handle_menu_selection() {
         8)  # Show Status
             show_status
             ;;
-        9)  # Exit
-            echo
-            echo -e "${GREEN}Thank you for using GitFlow Manager!${NC}"
-            echo
-            exit 0
+        9)  # Initialize Project
+            initialize_project
             ;;
         *)
             error "Option invalide"
@@ -1242,9 +1239,10 @@ show_menu() {
     echo -e "${CYAN}│${NC} ${BOLD}Other Actions${NC}                          ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC} ${BLUE}[7]${NC} Create Commit                      ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC} ${BLUE}[8]${NC} View Status                        ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${BLUE}[9]${NC} Initialize Project                 ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC} ${BLUE}[u]${NC} Check for Updates                  ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC} ${BLUE}[h]${NC} Show Help                          ${CYAN}│${NC}"
-    echo -e "${CYAN}│${NC} ${RED}[9]${NC} Exit                              ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${RED}[0]${NC} Exit                              ${CYAN}│${NC}"
     echo -e "${CYAN}╰───────────────────────────────────────╯${NC}"
     
     # Footer
@@ -1364,6 +1362,137 @@ show_status() {
     echo -e "${CYAN}╰───────────────────────────────────────╯${NC}"
     echo
     read -p "Press Enter to continue..."
+}
+
+# Function to initialize project
+initialize_project() {
+    clear
+    echo -e "${BOLD}🚀 Initialisation du Projet GitFlow${NC}"
+    echo -e "${CYAN}═══════════════════════════════════${NC}\n"
+
+    # 1. Vérifier si Git est initialisé
+    if ! git rev-parse --git-dir > /dev/null 2>&1; then
+        echo -e "${YELLOW}Git n'est pas initialisé. Initialisation...${NC}"
+        git init
+        echo -e "${GREEN}✓ Git initialisé${NC}\n"
+    else
+        echo -e "${GREEN}✓ Git déjà initialisé${NC}\n"
+    fi
+
+    # 2. Configuration Git
+    echo -e "${BOLD}Configuration Git${NC}"
+    if [[ -z "$(git config user.name)" ]]; then
+        echo -e "${YELLOW}Entrez votre nom :${NC}"
+        read git_name
+        git config user.name "$git_name"
+    fi
+    if [[ -z "$(git config user.email)" ]]; then
+        echo -e "${YELLOW}Entrez votre email :${NC}"
+        read git_email
+        git config user.email "$git_email"
+    fi
+    echo -e "${GREEN}✓ Configuration Git complétée${NC}\n"
+
+    # 3. Création des branches principales
+    echo -e "${BOLD}Configuration des branches${NC}"
+    
+    # Créer main si elle n'existe pas
+    if ! git rev-parse --verify main >/dev/null 2>&1; then
+        git checkout -b main
+        git commit --allow-empty -m "chore: initial commit"
+        echo -e "${GREEN}✓ Branche main créée${NC}"
+    fi
+
+    # Créer develop si elle n'existe pas
+    if ! git rev-parse --verify develop >/dev/null 2>&1; then
+        git checkout -b develop main
+        echo -e "${GREEN}✓ Branche develop créée${NC}"
+    fi
+
+    # 4. Configuration du remote
+    echo -e "\n${BOLD}Configuration du dépôt distant${NC}"
+    if ! git remote | grep -q "origin"; then
+        echo -e "${YELLOW}Voulez-vous configurer un dépôt distant ? (O/n)${NC}"
+        read -r response
+        if [[ "$response" =~ ^[Oo]$ ]] || [[ -z "$response" ]]; then
+            echo -e "${YELLOW}Entrez l'URL du dépôt distant (ex: https://github.com/user/repo.git):${NC}"
+            read remote_url
+            git remote add origin "$remote_url"
+            echo -e "${GREEN}✓ Dépôt distant configuré${NC}"
+        fi
+    else
+        echo -e "${GREEN}✓ Dépôt distant déjà configuré${NC}"
+    fi
+
+    # 5. Création des fichiers essentiels
+    echo -e "\n${BOLD}Création des fichiers essentiels${NC}"
+    
+    # README.md
+    if [[ ! -f "README.md" ]]; then
+        echo "# $(basename $(pwd))
+
+## Description
+Description de votre projet
+
+## Installation
+\`\`\`bash
+npm install
+\`\`\`
+
+## Utilisation
+\`\`\`bash
+npm start
+\`\`\`
+
+## Contribution
+Voir le fichier CONTRIBUTING.md
+
+## Licence
+MIT" > README.md
+        echo -e "${GREEN}✓ README.md créé${NC}"
+    fi
+
+    # CHANGELOG.md
+    if [[ ! -f "CHANGELOG.md" ]]; then
+        echo "# Changelog
+
+Toutes les modifications notables de ce projet seront documentées dans ce fichier.
+
+## [Unreleased]
+
+### Ajouté
+### Modifié
+### Corrigé
+### Supprimé" > CHANGELOG.md
+        echo -e "${GREEN}✓ CHANGELOG.md créé${NC}"
+    fi
+
+    # .gitignore
+    if [[ ! -f ".gitignore" ]]; then
+        echo "node_modules/
+.env
+.DS_Store
+*.log
+coverage/
+dist/
+build/" > .gitignore
+        echo -e "${GREEN}✓ .gitignore créé${NC}"
+    fi
+
+    # 6. Premier commit si nécessaire
+    if [[ -n "$(git status --porcelain)" ]]; then
+        echo -e "\n${YELLOW}Création du commit initial avec les fichiers de base...${NC}"
+        git add .
+        git commit -m "chore: initialisation du projet"
+        echo -e "${GREEN}✓ Commit initial créé${NC}"
+    fi
+
+    echo -e "\n${GREEN}✅ Initialisation du projet terminée avec succès !${NC}"
+    echo -e "${BLUE}Branches créées : main, develop${NC}"
+    echo -e "${BLUE}Fichiers créés : README.md, CHANGELOG.md, .gitignore${NC}\n"
+    
+    echo -e "${YELLOW}Appuyez sur Entrée pour continuer...${NC}"
+    read
 }
 
 # Main menu loop
