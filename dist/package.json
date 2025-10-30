@@ -1,0 +1,88 @@
+{
+    "name": "flowmaster-cli",
+    "version": "1.1.10",
+    "description": "A modern GitFlow CLI tool",
+    "bin": {
+        "flowmaster": "./dist/bin/flowmaster.js",
+        "fm": "./dist/bin/flowmaster.js"
+    },
+    "files": [
+        "bin/",
+        "lib/",
+        "scripts/",
+        "gitflow.sh"
+    ],
+    "scripts": {
+        "preinstall": "node scripts/preinstall.js",
+        "postinstall": "node scripts/postinstall.js",
+        "uninstall": "node scripts/uninstall.js",
+        "build": "tsc && npm run copy-assets",
+        "copy-assets": "cp -r lib dist/ && cp gitflow.sh dist/",
+        "build:watch": "tsc --watch",
+        "clean": "rm -rf dist",
+        "prebuild": "npm run clean",
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "test:coverage": "jest --coverage",
+        "test:unit": "jest --config jest.config.js",
+        "test:integration": "npm run build && jest --config jest.config.ts.js",
+        "test:integration:watch": "jest --config jest.config.ts.js --watch",
+        "test:init": "jest __tests__/cli.test.js -t 'should initialize'",
+        "test:reorganize": "jest __tests__/cli.test.js -t 'should reorganize'",
+        "test:changelog": "jest __tests__/changelog.test.js",
+        "lint": "eslint . --ext .ts,.js",
+        "lint:fix": "eslint . --ext .ts,.js --fix",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "release": "npm run build && npm run test:integration && npm run standardize-changelog",
+        "release:patch": "npm version patch && npm run release",
+        "release:minor": "npm version minor && npm run release",
+        "release:major": "npm version major && npm run release",
+        "release:alpha": "npm version prerelease --preid=alpha && npm run release",
+        "release:beta": "npm version prerelease --preid=beta && npm run release",
+        "release:rc": "npm version prerelease --preid=rc && npm run release"
+    },
+    "keywords": [
+        "git",
+        "gitflow",
+        "cli",
+        "workflow"
+    ],
+    "author": "ndg23",
+    "license": "MIT",
+    "dependencies": {
+        "chalk": "^4.1.2",
+        "commander": "^8.3.0"
+    },
+    "preferGlobal": true,
+    "engines": {
+        "node": ">=12"
+    },
+    "devDependencies": {
+        "@types/jest": "^30.0.0",
+        "@types/node": "^20.19.24",
+        "@types/semver": "^7.7.1",
+        "@typescript-eslint/eslint-plugin": "^8.46.2",
+        "@typescript-eslint/parser": "^8.46.2",
+        "eslint": "^9.38.0",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-prettier": "^5.5.4",
+        "jest": "^29.7.0",
+        "prettier": "^3.6.2",
+        "ts-jest": "^29.4.5",
+        "typescript": "^5.0.0"
+    },
+    "jest": {
+        "testEnvironment": "node",
+        "testMatch": [
+            "**/__tests__/**/*.js",
+            "**/?(*.)+(spec|test).js"
+        ],
+        "coverageDirectory": "coverage",
+        "collectCoverageFrom": [
+            "src/**/*.js",
+            "!**/node_modules/**",
+            "!**/vendor/**"
+        ]
+    }
+}

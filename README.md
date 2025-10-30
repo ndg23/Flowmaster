@@ -13,6 +13,14 @@ A powerful and intuitive command-line tool for managing Git workflows with GitFl
 - 📘 Built-in workflow documentation
 - 🔄 Automated changelog generation
 
+## 📚 API Documentation
+
+For developers looking to integrate FlowMaster's Bash functions or understand the internal architecture:
+
+- **[Bash API Reference](README-API.md)**: Complete documentation of all Bash functions, their parameters, return values, and usage examples
+- Modular architecture with 6 core modules: utils, feature, release, hotfix, commit, and UI
+- TypeScript CLI interface with comprehensive type definitions
+
 ## 🎯 Version Format
 
 - Production: `X.Y.Z` (e.g., 1.0.0)
