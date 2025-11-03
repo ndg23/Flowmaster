@@ -18,8 +18,7 @@ interface ConfigOptions {
 program
   .name('flowmaster')
   .description('A modern GitFlow CLI tool')
-  .version(packageJson.version, '-v, --version', 'output the version number')
-  .usage('<command> [options]');
+  .version(packageJson.version, '-v, --version', 'output the version number');
 
 // Add commands
 program
